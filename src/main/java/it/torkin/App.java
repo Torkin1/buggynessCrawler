@@ -8,7 +8,6 @@ import java.util.logging.Logger;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.Repository;
-import org.eclipse.jgit.lib.RepositoryBuilder;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 
 /**
@@ -51,7 +50,8 @@ public class App
             }
     
         } while (repository == null);
-        logger.log(Level.INFO, String.format("repo %s/%s successfully opened", repoAuthor, repoName));
+        String repoOpenedMsg = String.format("repo %s/%s successfully opened", repoAuthor, repoName);
+        logger.log(Level.INFO, repoOpenedMsg);
 
     }
 }
