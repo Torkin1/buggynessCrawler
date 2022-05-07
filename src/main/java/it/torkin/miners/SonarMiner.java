@@ -7,6 +7,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import it.torkin.entities.Observation;
+import it.torkin.entities.Release;
 import it.torkin.entities.sonarcloud.IssueQueryResult;
 import it.torkin.rest.ClientResourceGetter;
 
@@ -17,7 +18,7 @@ public class SonarMiner extends Miner{
     private Logger logger;
     
     public SonarMiner(String organization, String project){
-        super("mine", SonarMiner.class, Feature.CODE_SMELLS);
+        super( SonarMiner.class, Feature.CODE_SMELLS);
         this.setOrganization(organization);
         this.setProject(project);
         this.logger = Logger.getLogger(this.getClass().getName());
@@ -60,23 +61,23 @@ public class SonarMiner extends Miner{
     
     }
     
-    public void mineCodeSmells(Observation observation) {
+    public void mineCodeSmells(Release release, String resourcePath, Observation observation) {
 
-        
         try {
             // queries sonarcloud for smells of given file at given release
             String query = forgeProjectIssuesQuery(
                     SonarQuery.GET_PROJECT_ISSUES,
-                    observation.getResourceName(),
+                    resourcePath,
                     SonarIssueType.CODE_SMELL,
-                    observation.getRelease().getReleaseDate());
-            IssueQueryResult issueQueryResult = (new ClientResourceGetter<IssueQueryResult>(IssueQueryResult.class)).getClientResourceObject(query);
-            
+                    release.getReleaseDate());
+            IssueQueryResult issueQueryResult = (new ClientResourceGetter<IssueQueryResult>(IssueQueryResult.class))
+                    .getClientResourceObject(query);
+
             observation.setnSmells(issueQueryResult.getTotal());
         } catch (IOException e) {
             logger.log(Level.SEVERE, e.getMessage(), e);
         }
 
     }
-    
+
 }

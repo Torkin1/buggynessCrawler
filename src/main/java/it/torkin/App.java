@@ -77,17 +77,14 @@ public class App
             }
 
             // orders releases by release date
-            Collections.sort(releases, (r1, r2) -> {
-
-                return r1.getReleaseDate().compareTo(r2.getReleaseDate());
-            });
+            Collections.sort(releases, (r1, r2) -> r1.getReleaseDate().compareTo(r2.getReleaseDate()));
 
             // thrash away most recent releases
             int pivot = (lastReleasePercentageToIgnore / 100 * tags.size()) - 1;
             releases = releases.subList(0, pivot);
 
             // saves releases in global accessible object
-            TargetInformations.getReference().getReleases().addAll(releases);
+            Releases.getReference().getReleases().addAll(releases);
         
         } catch (GitAPIException | IOException e) {
             
