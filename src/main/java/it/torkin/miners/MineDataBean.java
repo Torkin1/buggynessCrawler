@@ -1,6 +1,5 @@
 package it.torkin.miners;
 
-import java.util.Set;
 
 import it.torkin.entities.ObservationMatrix;
 import it.torkin.entities.Release;

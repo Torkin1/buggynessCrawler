@@ -2,7 +2,6 @@ package it.torkin.dao.sonar;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.logging.Logger;
 
 import it.torkin.rest.ClientResourceGetter;
 import it.torkin.rest.UnableToGetResourceObjectException;
@@ -11,7 +10,6 @@ public class SonarDao {
 
     private String organization;
     private String project;
-    private Logger logger = Logger.getLogger(this.getClass().getName());
 
     public SonarDao(String organization, String project){
         this.setOrganization(organization);
@@ -39,7 +37,7 @@ public class SonarDao {
         if (createdBefore == null){
             createdBefore = new Date();
         }  
-        String createdBeforeString = new SimpleDateFormat("yyyy-mm-dd").format(createdBefore);
+        String createdBeforeString = new SimpleDateFormat("yyyy-MM-dd").format(createdBefore);
         resourcePath = (resourcePath != null)? String.format(":%s", resourcePath) : "";
 
         

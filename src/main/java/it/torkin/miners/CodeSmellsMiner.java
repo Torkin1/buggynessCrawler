@@ -6,9 +6,8 @@ import java.util.logging.Logger;
 import it.torkin.dao.sonar.IssueQueryResult;
 import it.torkin.dao.sonar.SonarDao;
 import it.torkin.dao.sonar.UnableToGetSmellsException;
-import it.torkin.entities.Observation;
 
-public class CodeSmellsMiner implements Miner{
+public class CodeSmellsMiner extends Miner{
 
     private Logger logger = Logger.getLogger(this.getClass().getName());
     /** sonar organization name */
@@ -17,8 +16,9 @@ public class CodeSmellsMiner implements Miner{
     private String project;
     
     public CodeSmellsMiner(String organization, String project){
-        this.organization = organization;
-        this.project = project;
+        super(organization, project);
+        this.organization = super.owner.toLowerCase();
+        this.project = String.format("%s%s_%s", super.owner.substring(0,1).toUpperCase(), super.owner.substring(1), super.repo);
     }
     
     @Override
@@ -29,12 +29,12 @@ public class CodeSmellsMiner implements Miner{
             // queries sonarcloud for smells of given file at given release
             SonarDao dao = new SonarDao(this.organization, this.project);
             IssueQueryResult issueQueryResult = dao.getCodeSmells(bean.getResourceName(), bean.getRelease().getReleaseDate());
-            Observation observation = bean
+            bean
                 .getObservationMatrix()
                 .getMatrix()
                 .get(bean.getRelease().getName())
-                .get(bean.getResourceName());
-            observation.setnSmells(issueQueryResult.getTotal());
+                .get(bean.getResourceName())
+                .put(Feature.CODE_SMELLS, Integer.toString(issueQueryResult.getTotal()));
         } catch (UnableToGetSmellsException e) {
             logger.log(Level.SEVERE, e.getMessage(), e);
         }

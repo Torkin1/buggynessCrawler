@@ -22,7 +22,7 @@ public class TestGitDao {
         release.setName("release-1.10.2");
         // no need to set release date
         
-        List<String> fileNames = dao.getFileNamesOfRelease(release);
+        List<String> fileNames = dao.getFileNamesOfRelease(release.getName());
 
         String actual = fileNames.get(0);
         assertEquals(expected, actual);

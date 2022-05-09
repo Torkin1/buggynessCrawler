@@ -4,22 +4,22 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.HashMap;
 
 import org.junit.jupiter.api.Test;
 
-import it.torkin.entities.Observation;
 import it.torkin.entities.ObservationMatrix;
 import it.torkin.entities.Release;
 import it.torkin.miners.MineDataBean;
 import it.torkin.miners.Miner;
 import it.torkin.miners.CodeSmellsMiner;
+import it.torkin.miners.Feature;
 
 class TestSonarMiner {
     
     @Test
     void testMineSmells() throws ParseException{
 
-        Observation observation = new Observation();
         Release release = new Release();
         Release[] releases = new Release[1];
         releases[0] = release;
@@ -28,25 +28,23 @@ class TestSonarMiner {
 
         ObservationMatrix observationMatrix = new ObservationMatrix(releases);
 
-        observation.setResourceName("lang/java/avro/src/main/java/org/apache/avro/message/BinaryMessageDecoder.java");
-        observation.setRelease(release);
-        observationMatrix.getMatrix().get(release.getName()).put(observation.getResourceName(), observation);
+        observationMatrix.getMatrix().get(release.getName()).put("lang/java/avro/src/main/java/org/apache/avro/message/BinaryMessageDecoder.java", new HashMap<>());
 
         MineDataBean bean = new MineDataBean();
         bean.setObservationMatrix(observationMatrix);
         bean.setRelease(release);
-        bean.setResourceName(observation.getResourceName());
+        bean.setResourceName("lang/java/avro/src/main/java/org/apache/avro/message/BinaryMessageDecoder.java");
         
-        Miner miner = new CodeSmellsMiner("torkin1", "Torkin1_avro");
+        Miner miner = new CodeSmellsMiner("torkin1", "avro");
         miner.mine(bean);
 
-        assertEquals(1,
+        assertEquals("1",
                      bean
                         .getObservationMatrix()
                         .getMatrix()
                         .get(release.getName())
-                        .get(observation.getResourceName())
-                        .getnSmells()
+                        .get("lang/java/avro/src/main/java/org/apache/avro/message/BinaryMessageDecoder.java")
+                        .get(Feature.CODE_SMELLS)
                         );
     }
 }
