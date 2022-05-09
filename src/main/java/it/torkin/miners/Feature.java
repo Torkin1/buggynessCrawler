@@ -1,21 +1,35 @@
 package it.torkin.miners;
 
-public enum Feature {
+import java.util.EnumSet;
 
-    CODE_SMELLS("codeSmells")
+public enum Feature {
+    
+    CODE_SMELLS("codeSmells", CodeSmellsMiner.class)
     ;
 
-    private String name;
+    private final String name;
+    private final Class<? extends Miner> miner;
     
-    private Feature(String name){
+    private Feature(String name, Class<? extends Miner> miner){
         this.name = name;
+        this.miner = miner;
     }
 
-    @Override
-    public String toString() {
-        return this.name;
+    public static Feature getFeatureFromName(String name) throws UnknownFeatureException{
+        for (Feature f : EnumSet.allOf(Feature.class)){
+            if (name.compareTo(f.toString()) == 0){
+                return f;
+            }
+        }
+        throw new UnknownFeatureException(name);
     }
 
-    
+    public String getName() {
+        return name;
+    }
+
+    public Class<? extends Miner> getMiner() {
+        return miner;
+    }
 
 }

@@ -1,4 +1,4 @@
-package it.torkin.miners;
+package it.torkin.dao.sonar;
 
 enum SonarQuery{
 

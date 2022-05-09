@@ -1,4 +1,4 @@
-package it.torkin.entities.sonarcloud;
+package it.torkin.dao.sonar;
 
 public class IssueQueryResult {
     

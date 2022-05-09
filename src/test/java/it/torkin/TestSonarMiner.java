@@ -4,17 +4,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.EnumSet;
 
 import org.junit.jupiter.api.Test;
 
 import it.torkin.entities.Observation;
 import it.torkin.entities.ObservationMatrix;
 import it.torkin.entities.Release;
-import it.torkin.miners.Feature;
 import it.torkin.miners.MineDataBean;
 import it.torkin.miners.Miner;
-import it.torkin.miners.SonarMiner;
+import it.torkin.miners.CodeSmellsMiner;
 
 class TestSonarMiner {
     
@@ -35,13 +33,12 @@ class TestSonarMiner {
         observationMatrix.getMatrix().get(release.getName()).put(observation.getResourceName(), observation);
 
         MineDataBean bean = new MineDataBean();
-        bean.setMetrics(EnumSet.of(Feature.CODE_SMELLS));
         bean.setObservationMatrix(observationMatrix);
         bean.setRelease(release);
         bean.setResourceName(observation.getResourceName());
         
-        Miner miner = new SonarMiner("torkin1", "Torkin1_avro");
-        miner.mineData(bean);
+        Miner miner = new CodeSmellsMiner("torkin1", "Torkin1_avro");
+        miner.mine(bean);
 
         assertEquals(1,
                      bean

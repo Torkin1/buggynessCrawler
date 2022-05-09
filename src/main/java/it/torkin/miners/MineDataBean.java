@@ -6,9 +6,6 @@ import it.torkin.entities.ObservationMatrix;
 import it.torkin.entities.Release;
 
 public class MineDataBean {
-
-    /** which features of observed resource must be measured */
-    private Set<Feature> features;                                  
     
     /**where measures will be collected
      */
@@ -20,24 +17,12 @@ public class MineDataBean {
     /**which file has to be measured */
     private String resourceName;                                    
 
-    public Set<Feature> getFeatures() {
-        return features;
-    }
-
-    public void setMetrics(Set<Feature> metrics) {
-        this.features = metrics;
-    }
-
     public ObservationMatrix getObservationMatrix() {
         return observationMatrix;
     }
 
     public void setObservationMatrix(ObservationMatrix observationMatrix) {
         this.observationMatrix = observationMatrix;
-    }
-
-    public void setFeatures(Set<Feature> features) {
-        this.features = features;
     }
 
     public Release getRelease() {
