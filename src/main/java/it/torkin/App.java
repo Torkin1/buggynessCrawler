@@ -1,96 +1,113 @@
 package it.torkin;
 
-import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.eclipse.jgit.api.Git;
-import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.lib.Ref;
 import org.eclipse.jgit.lib.Repository;
-import org.eclipse.jgit.revwalk.RevWalk;
-import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 
+import it.torkin.dao.git.GitDao;
+import it.torkin.dao.git.UnableToGetReleasesException;
+import it.torkin.entities.ObservationMatrix;
 import it.torkin.entities.Release;
+import it.torkin.miners.Feature;
+import it.torkin.miners.UnknownFeatureException;
 
 public class App 
 {
-    private static Logger logger = Logger.getLogger(App.class.getName());
-    private static final String REPO_URL_TEMPLATE = "https://github.com/%s/%s";
-    
-    public static void main( String[] args ) throws InvalidArgumentsException, UnableToAccessRepositoryException
-    {
-        if (args.length < 2){
-            throw new InvalidArgumentsException("Not enough arguments. Please specify repo author and name (in this order)");
-        }
-        
-        String[] repoString = args[0].split("/");                       // repoAuthor/repoName
-        int lastReleasePercentageToIgnore = Integer.parseInt(args[1]);  // What percentage of most recent release we ignore to mitigate snoring
-        
-        String repoAuthor = repoString[0];
-        String repoName = repoString[1]; 
-        Repository repository = null;
-        File repoDir = new File(repoName);
+    private static final Logger logger = Logger.getLogger(App.class.getName());
 
-        // Opens local repo if exists.       
-        do {
-            try {
-            
-                FileRepositoryBuilder repositoryBuilder = new FileRepositoryBuilder();
-                repositoryBuilder.setMustExist(true);
-                repositoryBuilder.setWorkTree(repoDir);
-                repository = repositoryBuilder.build();
-            } catch (IOException e) {
-                
-                // Local repo is not accessible, we try to clone it.
-                logger.log(Level.WARNING, "Local repo is not accessible, cloning it");
-                String repoUri = String.format(REPO_URL_TEMPLATE, repoAuthor, repoName);
-                try {
-                    Git.cloneRepository().setURI(repoUri).setDirectory(repoDir).call();
-                } catch (GitAPIException e1) {
-                    
-                    throw new UnableToAccessRepositoryException("repo doesn't exits locally and can't clone it", e1);
-                }
-            }
-    
-        } while (repository == null);
-        String repoOpenedMsg = String.format("repo %s/%s successfully opened", repoAuthor, repoName);
-        logger.log(Level.INFO, repoOpenedMsg);
+    // args
 
+    /** Owner of the repository*/
+    private static String repoOwner;
+    
+    /**name of repository*/
+    private static String repoName;
+    
+    /** reference to the repository object */
+    private static Repository repository = null;
+    
+    /** How many most recent release must be ignored to mitigate snoring */
+    private static int lastReleasePercentageToIgnore;
+
+    /** what features must be measured */
+    private static Set<Feature> featuresToMeasure= EnumSet.noneOf(Feature.class);
+    
+    /**
+     * All setup logic goes here
+     * @throws UnableToAccessRepositoryException
+     * @throws IOException
+     * @throws UnableToGetReleasesException
+     */
+    private static void bootstrap() {
+        /*
         // extracts list of releases and makes it global accessible
-        Git git = new Git(repository);
-        List<Release> releases = new ArrayList<>();
-        try {
-            List<Ref> tags = git.tagList().call();
-            final RevWalk walk = new RevWalk(repository);
-
-            // converts every git tag in a Release object
-            for (Ref tag : tags){
-                Release release = new Release();
-                release.setName(tag.getName());
-                release.setReleaseDate(walk.parseTag(tag.getObjectId()).getTaggerIdent().getWhen());
-                releases.add(release);
-            }
-
-            // orders releases by release date
-            Collections.sort(releases, (r1, r2) -> r1.getReleaseDate().compareTo(r2.getReleaseDate()));
+        GitDao gitDao = new GitDao(repoName);
+            List<Release> releases = gitDao.getTimeOrederedReleases(new Date(0), new Date());
 
             // thrash away most recent releases
-            int pivot = (lastReleasePercentageToIgnore / 100 * tags.size()) - 1;
+            int pivot = (lastReleasePercentageToIgnore / 100 * releases.size()) - 1;
             releases = releases.subList(0, pivot);
-
-            // saves releases in global accessible object
-            Releases.getReference().getReleases().addAll(releases);
-        
-        } catch (GitAPIException | IOException e) {
-            
-            logger.log(Level.SEVERE, e.getMessage());
-        }
+        */
   
+    }
+    
+    /**
+     * <p> parses command line arguments. </p>
+     * <p> arg[0] : repoOwner/repoName string <p>
+     * arg[1] : percentage of last releases to ignore <p>
+     * arg[2] : comma-separated list of feature names to measure <p>
+     * @param args args to parse
+     * @throws InvalidArgumentsException
+     */
+    private static void parseArgs(String[] args) throws InvalidArgumentsException{
+        if (args.length < 2){
+            throw new InvalidArgumentsException("Not enough arguments.");
+        }
+        
+        // args[0]
+        String[] repoStringTokenized = args[0].split("/"); 
+        repoOwner = repoStringTokenized[0];
+        repoName = repoStringTokenized[1];
+
+        // args[1]
+        lastReleasePercentageToIgnore = Integer.parseInt(args[1]);
+        
+        // args[2]
+        String[] requestedFeatureNames = args[2].split(",");
+        for (String name : requestedFeatureNames){
+            try {
+                featuresToMeasure.add(Feature.getFeatureFromName(name));
+            } catch (UnknownFeatureException e) {
+                String msg = String.format("unrecognized feature name %s", e);
+                logger.log(Level.WARNING, msg, e);
+            }
+        }        
+    }
+
+    public static void main( String[] args ) throws InvalidArgumentsException, UnableToAccessRepositoryException, UnableToGetReleasesException
+    {
+        parseArgs(args);
+
+        GitDao gitDao = new GitDao(repoName);
+
+        // gets list of releases to mine data from, discarding desired last releases percentage
+        List<Release> releases = gitDao.getTimeOrederedReleases(new Date(0), new Date());
+        int pivot = (lastReleasePercentageToIgnore / 100 * releases.size()) - 1;
+        releases = releases.subList(0, pivot);
+
+        // TODO: prepares observation matrix
+        ObservationMatrix observationMatrix = new ObservationMatrix((Release[])releases.toArray());
+
+        // TODO: call all implemented miners and make them mine data
+
+        // TODO: dump observation matrix in a csv file. Each row is identified by a couple of releaseDate, resourceName
 
     }
 }

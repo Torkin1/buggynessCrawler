@@ -6,7 +6,7 @@ import java.util.Map;
 public class ObservationMatrix {
     
     /**
-     * A matrix which holds observations. Every cell identifies a resource in a particular release.
+     * A matrix holding observations. Every cell identifies a resource in a particular release.
      */
     private final Map<String, Map<String, Observation>> matrix;
 

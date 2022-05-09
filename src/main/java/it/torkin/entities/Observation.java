@@ -5,8 +5,10 @@ package it.torkin.entities;
  */
 public class Observation {
     
-    private String resourceName;    // resource identifier
-    private Release release;        // which release measures are mined from
+    /** resource identifier */
+    private String resourceName;    
+    /** which releases measures are mined from */
+    private Release release;        
 
     // features
     
