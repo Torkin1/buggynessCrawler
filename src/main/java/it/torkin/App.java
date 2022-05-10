@@ -43,6 +43,15 @@ public class App
 
     /** what features must be measured */
     private static Set<Feature> featuresToMeasure= EnumSet.noneOf(Feature.class);
+
+    /**list of miners of requested implemented features */
+    private static List<Miner> miners = new ArrayList<>();
+
+    /** Will hold measures done by miners */
+    private static ObservationMatrix observationMatrix;
+
+    /**Releases to get data from */
+    private static List<Release> releases;
     
     
     /**
@@ -79,52 +88,74 @@ public class App
         // featuresToMeasure.add(Feature.BUGGYNESS);
     }
 
-    public static void main( String[] args ) throws InvalidArgumentsException, UnableToAccessRepositoryException, UnableToGetReleasesException
-    {
-        parseArgs(args);
-
-        List<Miner> miners;
-        List<Release> releases;
-        ObservationMatrix observationMatrix;
-        MineDataBean mineDataBean;
-
-        // Creates miner for desired measures. If a feature miner cannot be found, the feature is removed from resuested features
-        miners = new ArrayList<>();
+    private static void prepareMiners() {
+        // Creates miner for desired measures. If a feature miner cannot be found, the
+        // feature is removed from resuested features
         for (Feature f : featuresToMeasure) {
-            
+
             try {
                 miners.add(f.getMiner().getConstructor(String.class, String.class).newInstance(repoOwner, repoName));
             } catch (InstantiationException | IllegalAccessException | IllegalArgumentException
                     | InvocationTargetException | NoSuchMethodException | SecurityException e) {
-                String msg = String.format("Unable to find implementation %s to mine feature %s", f.getClass().getSimpleName(), f.getName());
-                        logger.log(Level.WARNING, msg, e);
-                        featuresToMeasure.remove(f);
-            }
-        }        
-
-        GitDao gitDao = new GitDao(repoName);
-
-        // gets list of releases to mine data from, discarding desired last releases percentage
-        releases = gitDao.getTimeOrederedReleases(new Date(0), new Date());
-        int pivot = releases.size() - (int)(Math.floor((lastReleasePercentageToIgnore) / 100.0 * releases.size()));
-        releases = releases.subList(0, pivot);
-
-        // prepares observation matrix with a row for each release and a column for each resource. Matrix cells are initialized with empty Observation objects
-        observationMatrix = new ObservationMatrix(releases.toArray(new Release[0]));
-        observationMatrix.getMatrix().forEach(( releaseName, observations) -> {
-            try {
-                List<String> fileNamesOfRelease = gitDao.getFileNamesOfRelease(releaseName);
-                for (String fileName : fileNamesOfRelease){
-                    observations.put(fileName, new EnumMap<>(Feature.class));
-                }
-            } catch (UnableToGetFileNamesException e) {
-                String msg = String.format("ignoring files of release %s", releaseName);
+                String msg = String.format("Unable to find implementation %s to mine feature %s",
+                        f.getClass().getSimpleName(), f.getName());
                 logger.log(Level.WARNING, msg, e);
+                featuresToMeasure.remove(f);
             }
-        });
+        }
 
+    }
+
+    private static void prepareReleases() throws UnableToPrepareReleasesException{
+        
+        // gets list of releases to mine data from, discarding desired last releases percentage
+        try {
+            GitDao gitDao = new GitDao(repoName);
+            releases = gitDao.getTimeOrederedReleases(new Date(0), new Date());
+            int pivot = releases.size() - (int)(Math.floor((lastReleasePercentageToIgnore) / 100.0 * releases.size()));
+            releases = releases.subList(0, pivot);
+        } catch (UnableToAccessRepositoryException | UnableToGetReleasesException e) {
+            throw new UnableToPrepareReleasesException(e);
+        }
+
+    }
+    
+    private static void prepareObservationMatrix() throws UnableToPrepareObservationMatrixException{
+
+        try {
+            GitDao gitDao = new GitDao(repoName);
+            
+            // prepares observation matrix with a row for each release and a column for each resource. Matrix cells are initialized with empty Observation objects
+            observationMatrix = new ObservationMatrix(releases.toArray(new Release[0]));
+            observationMatrix.getMatrix().forEach(( releaseName, observations) -> {
+                try {
+                    List<String> fileNamesOfRelease = gitDao.getFileNamesOfRelease(releaseName);
+                    for (String fileName : fileNamesOfRelease){
+                        observations.put(fileName, new EnumMap<>(Feature.class));
+                    }
+                } catch (UnableToGetFileNamesException e) {
+                    String msg = String.format("ignoring files of release %s", releaseName);
+                    logger.log(Level.WARNING, msg, e);
+                }
+            });
+        } catch (UnableToAccessRepositoryException e) {
+            throw new UnableToPrepareObservationMatrixException(e);
+        }
+            
+
+    }
+
+    public static void main( String[] args ) throws InvalidArgumentsException, UnableToPrepareReleasesException, UnableToPrepareObservationMatrixException
+    {
+        
+        // bootstrap operations
+        parseArgs(args);
+        prepareMiners();
+        prepareReleases();
+        prepareObservationMatrix();
+        
         // launches miners
-        mineDataBean = new MineDataBean();
+        MineDataBean mineDataBean = new MineDataBean();
         mineDataBean.setObservationMatrix(observationMatrix);
 
         try (CSVPrinter printer = new CSVPrinter(new FileWriter("out.csv"), CSVFormat.DEFAULT)) {
@@ -142,8 +173,6 @@ public class App
             printer.println();
             
             for (Release r : releases) { // for each release ...
-                String progressMsg = String.format("Mined %d%% of releases", releases.indexOf(r) * 100 / releases.size());
-                logger.log(Level.INFO, progressMsg);
                 mineDataBean.setRelease(r);
                 mineDataBean
                         .getObservationMatrix()
@@ -184,7 +213,11 @@ public class App
                                 logger.log(Level.SEVERE, msg, e);
                             }
                         });
+                        
+                        // dumps current release and displays progress status
                         printer.flush();
+                        String progressMsg = String.format("Mined %.2f%% of requested releases", (releases.indexOf(r) + 1) * 100.0 / releases.size());
+                        logger.log(Level.INFO, progressMsg);        
             }
         } catch (IOException e) {
             logger.log(Level.SEVERE, "unable to close csv file", e);
