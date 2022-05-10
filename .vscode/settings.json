@@ -1,3 +1,6 @@
 {
-    "java.configuration.updateBuildConfiguration": "automatic"
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "github-actions.workflows.pinned.workflows": [
+        ".github/workflows/sonarcloud.yml"
+    ]
 }

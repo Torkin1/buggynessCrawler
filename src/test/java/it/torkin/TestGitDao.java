@@ -10,7 +10,7 @@ import it.torkin.dao.git.GitDao;
 import it.torkin.dao.git.UnableToGetFileNamesException;
 import it.torkin.entities.Release;
 
-public class TestGitDao {
+class TestGitDao {
     
     @Test
     void testGetFileNamesList() throws UnableToAccessRepositoryException, UnableToGetFileNamesException{
