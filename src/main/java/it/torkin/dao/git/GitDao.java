@@ -3,26 +3,31 @@ package it.torkin.dao.git;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.LogCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;
+import org.eclipse.jgit.diff.DiffEntry;
+import org.eclipse.jgit.diff.DiffFormatter;
+import org.eclipse.jgit.diff.RawTextComparator;
+import org.eclipse.jgit.diff.DiffEntry.ChangeType;
+import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.ObjectId;
-import org.eclipse.jgit.lib.Ref;
+import org.eclipse.jgit.lib.ObjectReader;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
-import org.eclipse.jgit.revwalk.RevObject;
-import org.eclipse.jgit.revwalk.RevTag;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.revwalk.RevWalk;
+import org.eclipse.jgit.revwalk.filter.MessageRevFilter;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
+import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import org.eclipse.jgit.treewalk.filter.PathSuffixFilter;
-
-import it.torkin.UnableToAccessRepositoryException;
-import it.torkin.entities.Release;
+import org.eclipse.jgit.util.io.DisabledOutputStream;
 
 public class GitDao {
     
@@ -43,76 +48,101 @@ public class GitDao {
         return repository;
     }
 
-    public List<Release> getReleases(Date startDate, Date endDate) throws UnableToGetReleasesException {
-        Git git = new Git(repository);
-        List<Release> releases = new ArrayList<>();
-        try {
-            List<Ref> tags = git.tagList().call();
-            RevWalk walk = new RevWalk(repository);
-            // converts every git tag in a Release object
-            Date currentTagDate;
-            Release currentRelease;
-            RevObject currentObject;
-            for (Ref tag : tags) {
-
-                currentObject = walk.parseAny(tag.getObjectId());
-                if (currentObject instanceof RevTag){
-                    currentTagDate = ((RevTag) currentObject).getTaggerIdent().getWhen();
-                    if (currentTagDate.compareTo(startDate) >= 0 && currentTagDate.compareTo(endDate) <= 0) {
-                        currentRelease = new Release();
-                        currentRelease.setName(tag.getName());
-                        currentRelease.setReleaseDate(currentTagDate);
-                        releases.add(currentRelease);
-                    }
-
-                        
-                }
-                
-            }
-
-            return releases;
-
-        } catch (GitAPIException | IOException e) {
-
-            throw new UnableToGetReleasesException(e);
-        }
-    }
-    
-    public List<Release> getTimeOrederedReleases(Date startDate, Date endDate) throws UnableToGetReleasesException {
-        List<Release> releases = this.getReleases(startDate, endDate);
-
-        // orders releases by release date
-        Collections.sort(releases, (r1, r2) -> r1.getReleaseDate().compareTo(r2.getReleaseDate()));
-
-        return releases;
-    }
-
-    public List<String> getFileNamesOfRelease(String releaseName) throws UnableToGetFileNamesException{
+    public List<String> getFileNames(RevCommit commit) throws UnableToGetFileNamesException{
         List<String> fileNames = new ArrayList<>();
 
-        RevWalk revWalk = new RevWalk(repository);
         String currentResourceName;
-        try {
-            RevCommit revCommit = revWalk.parseCommit(ObjectId.fromString(repository.resolve(releaseName).getName()));      // gets commit corresponding to release name
-            RevTree commitTree = revCommit.getTree();                                                                             // tree of files at given commit
+        try (TreeWalk treeWalk = new TreeWalk(repository); ){
+            RevTree commitTree = commit.getTree(); // tree of files at given commit
 
             // will walk files at given tree
-            TreeWalk treeWalk = new TreeWalk(repository);                               
+                                          
             treeWalk.addTree(commitTree);
-            treeWalk.setRecursive(true);                                                                                        // enters in directories
-            treeWalk.setFilter(PathSuffixFilter.create(".java"));                                                           // only java files listed
+            treeWalk.setRecursive(true); // enters in directories
+            treeWalk.setFilter(PathSuffixFilter.create(".java")); // only java files listed
             while(treeWalk.next()){
                 currentResourceName = treeWalk.getPathString();
-                if (!currentResourceName.contains("test") && !currentResourceName.contains("Test")){
+                if (!isTest(currentResourceName)){
                     fileNames.add(currentResourceName);
                 }
             }
         } catch (IOException e) {
             
-            throw new UnableToGetFileNamesException(releaseName, e);
+            throw new UnableToGetFileNamesException(e);
         }
 
         return fileNames;
 
+    }
+
+    /**
+     * gets most recent commit applied before beforeDate containing optional commentContent string in its comment 
+     * 
+     * @return
+     * @throws UnableToGetCommitsException
+     */
+    public RevCommit getLatestCommit(Date beforeDate, String commentContent) throws UnableToGetCommitsException {
+
+        try (Git git = new Git(repository)) {
+
+            LogCommand logCommand = git.log();
+            
+            if (commentContent != null){
+                logCommand.setRevFilter(MessageRevFilter.create(commentContent));
+            }
+            Iterable<RevCommit> commits = logCommand.call();
+            for (RevCommit commit : commits){
+                if (new Date (commit.getCommitTime()).compareTo(beforeDate) < 0){
+                    return (commit);
+                }
+            }
+            return null;
+
+        } catch (GitAPIException e) {
+
+            throw new UnableToGetCommitsException(e);
+        }
+    }
+
+    public RevCommit getLatestCommit(Date beforeDate) throws UnableToGetCommitsException {
+    
+        return getLatestCommit(beforeDate, null);
+    }
+
+    private boolean isTest(String resourceName){
+        return resourceName.contains("test") || resourceName.contains("Test");
+    }
+    
+    /**This method does not work with the first commit ever of the repository, because it has no parent */
+    public Set<String> getCommitChangeSet(RevCommit commit) throws UnableToGetChangeSet{
+        List<DiffEntry> diffEntries;
+        Set<String> names = new HashSet<>();
+        String name;
+
+        try (   
+            RevWalk rw = new RevWalk(repository);
+            DiffFormatter df = new DiffFormatter(DisabledOutputStream.INSTANCE);
+        ){
+
+            RevCommit parent = commit.getParent(0);
+            if (parent == null){
+                throw new NullParentException();
+            } 
+            df.setRepository(repository);
+            df.setDiffComparator(RawTextComparator.DEFAULT);
+            df.setPathFilter(PathSuffixFilter.create(".java"));
+            diffEntries = df.scan(parent.getTree(), commit.getTree());
+
+            for (DiffEntry entry : diffEntries){    // get path for each touched files
+                name = entry.getOldPath();
+                if (entry.getChangeType().equals(ChangeType.MODIFY) && !isTest(name)){
+                    names.add(name);
+                }
+            }
+            return names;
+            
+        } catch (IOException | NullParentException e) {
+            throw new UnableToGetChangeSet(e);
+        }
     }
 }

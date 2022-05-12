@@ -4,26 +4,30 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
-
 import it.torkin.dao.git.GitDao;
+import it.torkin.dao.git.UnableToAccessRepositoryException;
+import it.torkin.dao.git.UnableToGetCommitsException;
 import it.torkin.dao.git.UnableToGetFileNamesException;
-import it.torkin.dao.git.UnableToGetReleasesException;
+import it.torkin.dao.jira.JiraDao;
+import it.torkin.dao.jira.JiraRelease;
+import it.torkin.dao.jira.UnableToGetReleasesException;
 import it.torkin.entities.ObservationMatrix;
-import it.torkin.entities.Release;
+import it.torkin.miners.BuggynessMiner;
 import it.torkin.miners.Feature;
 import it.torkin.miners.MineDataBean;
 import it.torkin.miners.Miner;
+import it.torkin.miners.UnableToMineDataException;
 import it.torkin.miners.UnknownFeatureException;
 
 public class App 
@@ -51,7 +55,7 @@ public class App
     private static ObservationMatrix observationMatrix;
 
     /**Releases to get data from */
-    private static List<Release> releases;
+    private static List<JiraRelease> releases;
     
     
     /**
@@ -85,7 +89,9 @@ public class App
                 logger.log(Level.WARNING, msg, e);
             }
         }
-        // featuresToMeasure.add(Feature.BUGGYNESS);
+        
+        // buggyness must be last feature
+        featuresToMeasure.remove(Feature.BUGGYNESS);
     }
 
     private static void prepareMiners() {
@@ -110,11 +116,11 @@ public class App
         
         // gets list of releases to mine data from, discarding desired last releases percentage
         try {
-            GitDao gitDao = new GitDao(repoName);
-            releases = gitDao.getTimeOrederedReleases(new Date(0), new Date());
+            JiraDao jiraDao = new JiraDao(repoName.toUpperCase());
+            releases = jiraDao.getAllReleased();
             int pivot = releases.size() - (int)(Math.floor((lastReleasePercentageToIgnore) / 100.0 * releases.size()));
             releases = releases.subList(0, pivot);
-        } catch (UnableToAccessRepositoryException | UnableToGetReleasesException e) {
+        } catch (UnableToGetReleasesException e) {
             throw new UnableToPrepareReleasesException(e);
         }
 
@@ -126,22 +132,52 @@ public class App
             GitDao gitDao = new GitDao(repoName);
             
             // prepares observation matrix with a row for each release and a column for each resource. Matrix cells are initialized with empty Observation objects
-            observationMatrix = new ObservationMatrix(releases.toArray(new Release[0]));
-            observationMatrix.getMatrix().forEach(( releaseName, observations) -> {
-                try {
-                    List<String> fileNamesOfRelease = gitDao.getFileNamesOfRelease(releaseName);
+            observationMatrix = new ObservationMatrix(releases.toArray(new JiraRelease[0]));
+                for (JiraRelease release : releases){
+                        List<String> fileNamesOfRelease = gitDao.getFileNames(gitDao.getLatestCommit(release.getReleaseDate()));
                     for (String fileName : fileNamesOfRelease){
-                        observations.put(fileName, new EnumMap<>(Feature.class));
+                        Map<Feature, String> observation = new EnumMap<>(Feature.class);
+                        observation.put(Feature.BUGGYNESS, "no");
+                        observationMatrix.getMatrix().get(release.getName()).put(fileName, observation);
                     }
-                } catch (UnableToGetFileNamesException e) {
-                    String msg = String.format("ignoring files of release %s", releaseName);
-                    logger.log(Level.WARNING, msg, e);
-                }
-            });
-        } catch (UnableToAccessRepositoryException e) {
+        }
+            
+        } catch (UnableToAccessRepositoryException | UnableToGetFileNamesException | UnableToGetCommitsException e) {
             throw new UnableToPrepareObservationMatrixException(e);
         }
             
+
+    }
+
+    private static void printObservationMatrix(MineDataBean mineDataBean, CSVPrinter printer) throws IOException{
+        Set<Feature> orderedFeatures = new LinkedHashSet<>(featuresToMeasure);
+
+        // prints headers line in csv file
+        printer.print("Release");
+        printer.print("Resource");
+        for (Feature f : orderedFeatures) {
+            printer.print(f.getName());
+        }
+        printer.println();
+
+        // dumps observations in csv file
+        for (JiraRelease r : mineDataBean.getTimeOrderedReleases()) {
+            String rName = r.getName();
+            observationMatrix.getMatrix().get(rName).forEach((fName, observation) -> {
+                try {
+                    printer.print(rName);
+                    printer.print(fName);
+
+                    for (Feature f : orderedFeatures) {
+                        printer.print(observation.get(f));
+                    }
+                    printer.println();
+                } catch (IOException e) {
+
+                    logger.log(Level.SEVERE, "unable to write to csv file", e);
+                }
+            });
+        }
 
     }
 
@@ -157,70 +193,46 @@ public class App
         // launches miners
         MineDataBean mineDataBean = new MineDataBean();
         mineDataBean.setObservationMatrix(observationMatrix);
+        mineDataBean.setTimeOrderedReleases(releases);
 
         try (CSVPrinter printer = new CSVPrinter(new FileWriter("out.csv"), CSVFormat.DEFAULT)) {
 
-            Set<Feature> orderedFeatures = new LinkedHashSet<>(featuresToMeasure);
-            
-            printer.print("Release");
-            printer.print("Resource");
-            for (Feature f : orderedFeatures){
-             //   if (f != Feature.BUGGYNESS){
-                    printer.print(f.getName());
-            //    }
-            }
-            //printer.print(Feature.BUGGYNESS.getName());
-            printer.println();
-            
-            for (Release r : releases) { // for each release ...
-                mineDataBean.setRelease(r);
+            featuresToMeasure.add(Feature.BUGGYNESS);
+                        
+            for (JiraRelease r : releases) { // for each release ...
+                mineDataBean.setReleaseIndex(releases.indexOf(r));
+
+                // mines buggyness of all files in release
+                Miner buggynessMiner = new BuggynessMiner(repoOwner, repoName);
+                buggynessMiner.mine(mineDataBean);                
                 mineDataBean
                         .getObservationMatrix()
                         .getMatrix()
                         .get(r.getName()) // ... get all observations at given release ...
                         .forEach((resourceName, observation) -> { // ... and for each resource at given release ...
-                            mineDataBean.setResourceName(resourceName);
-                            for (Miner m : miners) { // ... mine all features of given resources.
-                                m.mine(mineDataBean); // Mined features will be stored in corresponding observation matrix cells
-                            }
                             try {
-                                printer.print(mineDataBean.getRelease().getName());
-                                printer.print(mineDataBean.getResourceName());
-                                for (Feature f : orderedFeatures){
-                  //                  if (f != Feature.BUGGYNESS{
-                                        printer.print(
-                                            mineDataBean
-                                            .getObservationMatrix()
-                                            .getMatrix()
-                                            .get(mineDataBean.getRelease().getName())
-                                            .get(mineDataBean.getResourceName())
-                                            .get(f)
-                                        );
-               //                     }
-     /*                               printer.print(printer.print(
-                                        mineDataBean
-                                        .getObservationMatrix()
-                                        .getMatrix()
-                                        .get(mineDataBean.getRelease().getName())
-                                        .get(mineDataBean.getResourceName())
-                                        .get(Feature.BUGGYNESS));
-                                        })
-                                */
-                                printer.println();
-                                    }
-                            } catch (IOException e) {
-                                String msg = String.format("unable to append line to csv of %s at %s", mineDataBean.getResourceName(), mineDataBean.getRelease().getName());
+                                mineDataBean.setResourceName(resourceName);
+                                for (Miner m : miners) { // ... mine all features of given resources.
+                                    m.mine(mineDataBean); // Mined features will be stored in corresponding observation matrix cells
+                                }
+                                
+                            } 
+                            catch (UnableToMineDataException e) {
+                                String msg = String.format("unable to append line to csv of %s at %s", mineDataBean.getResourceName(), mineDataBean.getTimeOrderedReleases().get(mineDataBean.getReleaseIndex()).getName());
                                 logger.log(Level.SEVERE, msg, e);
                             }
                         });
-                        
-                        // dumps current release and displays progress status
-                        printer.flush();
+                                                
                         String progressMsg = String.format("Mined %.2f%% of requested releases", (releases.indexOf(r) + 1) * 100.0 / releases.size());
                         logger.log(Level.INFO, progressMsg);        
             }
-        } catch (IOException e) {
-            logger.log(Level.SEVERE, "unable to close csv file", e);
+
+           // dumps observation matrix in csv file
+            printObservationMatrix(mineDataBean, printer); 
+
+        } catch (IOException | UnableToMineDataException e) {
+            logger.log(Level.SEVERE, "unable to write to csv file", e);
         }
     }
+
 }

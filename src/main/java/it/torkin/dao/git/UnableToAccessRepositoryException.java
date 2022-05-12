@@ -1,4 +1,4 @@
-package it.torkin;
+package it.torkin.dao.git;
 
 public class UnableToAccessRepositoryException extends Exception{
 

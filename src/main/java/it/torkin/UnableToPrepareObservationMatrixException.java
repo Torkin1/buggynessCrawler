@@ -1,8 +1,9 @@
 package it.torkin;
 
+
 public class UnableToPrepareObservationMatrixException extends Exception {
 
-    public UnableToPrepareObservationMatrixException(UnableToAccessRepositoryException e) {
+    public UnableToPrepareObservationMatrixException(Exception e) {
         super(e);
     }
 

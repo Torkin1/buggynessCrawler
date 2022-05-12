@@ -28,11 +28,11 @@ public class CodeSmellsMiner extends Miner{
             
             // queries sonarcloud for smells of given file at given release
             SonarDao dao = new SonarDao(this.organization, this.project);
-            IssueQueryResult issueQueryResult = dao.getCodeSmells(bean.getResourceName(), bean.getRelease().getReleaseDate());
+            IssueQueryResult issueQueryResult = dao.getCodeSmells(bean.getResourceName(), bean.getTimeOrderedReleases().get(bean.getReleaseIndex()).getReleaseDate());
             bean
                 .getObservationMatrix()
                 .getMatrix()
-                .get(bean.getRelease().getName())
+                .get(bean.getTimeOrderedReleases().get(bean.getReleaseIndex()).getName())
                 .get(bean.getResourceName())
                 .put(Feature.CODE_SMELLS, Integer.toString(issueQueryResult.getTotal()));
         } catch (UnableToGetSmellsException e) {

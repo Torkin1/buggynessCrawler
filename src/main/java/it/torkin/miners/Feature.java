@@ -62,7 +62,7 @@ public enum Feature {
      */
     //IMPORTED_CLASSES("importedClasses")
 
-    // BUGGYNESS("buggyness", BuggynessMiner.class)
+    BUGGYNESS("buggyness", null)
     ;
 
     private final String name;

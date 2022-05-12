@@ -1,4 +1,4 @@
-package it.torkin.dao.git;
+package it.torkin.dao.jira;
 
 public class UnableToGetReleasesException extends Exception {
     

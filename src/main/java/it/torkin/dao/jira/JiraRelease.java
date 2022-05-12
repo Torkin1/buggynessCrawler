@@ -1,14 +1,23 @@
-package it.torkin.entities;
+package it.torkin.dao.jira;
 
 import java.util.Date;
 
-public class Release {
+public class JiraRelease {
     
     private String name;
     private Date releaseDate;
+    private boolean released;
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public boolean isReleased() {
+        return released;
+    }
+
+    public void setReleased(boolean released) {
+        this.released = released;
     }
 
     public Date getReleaseDate() {

@@ -5,8 +5,9 @@ public abstract class Miner {
     /**
      * mines features specified in bean for a given resource in a given release.
      * @param bean
+     * @throws UnableToMineDataException
      */
-    public abstract void mine(MineDataBean bean);
+    public abstract void mine(MineDataBean bean) throws UnableToMineDataException;
 
     protected String owner;
     protected String repo;
