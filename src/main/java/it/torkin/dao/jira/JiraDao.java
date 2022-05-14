@@ -5,6 +5,8 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
+import it.torkin.dao.cache.GlobalCacheHolder;
+import it.torkin.dao.cache.GlobalCached;
 import it.torkin.rest.ClientResourceGetter;
 import it.torkin.rest.UnableToGetResourceObjectException;
 
@@ -37,52 +39,65 @@ public class JiraDao {
         return String.format(query.getQueryString(), args);
     }
 
-    /**gets all released versions 
+    /**
+     * gets all released versions
+     * 
      * @throws UnableToGetReleasesException
-     * */
-    public List<JiraRelease> getAllReleased() throws UnableToGetReleasesException{
+     */
+    public List<JiraRelease> getAllReleased() throws UnableToGetReleasesException {
 
-        try {
-            List<JiraRelease> released = new ArrayList<>();
-            ReleaseQueryResult queryResult;
-            int start = 0;
-            do {
-                queryResult = new ClientResourceGetter<>(ReleaseQueryResult.class).getClientResourceObject(forgeQuery(Query.GET_ALL_RELEASES, this.jiraProject));
-                for (JiraRelease r : queryResult.getValues()){
-                    if (r.isReleased() && r.getReleaseDate() != null){
-                        released.add(r);
+        List<JiraRelease> released = new ArrayList<>();
+        if (GlobalCacheHolder.getRef().getCache().getCached().get(GlobalCached.RELEASES.getKey()) == null) {
+            try {
+                List<JiraRelease> buffer = new ArrayList<>();
+                ReleaseQueryResult queryResult;
+                int start = 0;
+                do {
+                    queryResult = new ClientResourceGetter<>(ReleaseQueryResult.class)
+                            .getClientResourceObject(forgeQuery(Query.GET_ALL_RELEASES, this.jiraProject));
+                    for (JiraRelease r : queryResult.getValues()) {
+                        if (r.isReleased() && r.getReleaseDate() != null) {
+                            buffer.add(r);
+                        }
                     }
-                }
-                start += queryResult.getValues().length;
-            } while (start < queryResult.getTotal());
-            return released;
-        } catch (UnableToGetResourceObjectException e) {
-            
-            throw new UnableToGetReleasesException(e);
+                    start += queryResult.getValues().length;
+                } while (start < queryResult.getTotal());
+                GlobalCacheHolder.getRef().getCache().getCached().put(GlobalCached.RELEASES.getKey(), buffer);
+            } catch (UnableToGetResourceObjectException e) {
+
+                throw new UnableToGetReleasesException(e);
+            }
         }
-       
+        released.addAll((List<JiraRelease>) GlobalCacheHolder.getRef().getCache().getCached().get(GlobalCached.RELEASES.getKey()));
+        return released;
     }
 
     public List<JiraIssue> getAllFixedBugIssues() throws UnableToGetAllFixedBugsException {
 
         List<JiraIssue> fixedBugIssues = new ArrayList<>();
-        // query fixed bug issues from server
-        try {
-            int start = 0;
-            IssueQueryResult queryResult;
-            do {
-                queryResult = new ClientResourceGetter<>(IssueQueryResult.class)
-                        .getClientResourceObject(forgeQuery(Query.GET_ALL_FIXED_BUGS, this.jiraProject, start));
-                fixedBugIssues.addAll(Arrays.asList(queryResult.getIssues()));
-                start += queryResult.getIssues().length;
+        
+        if (GlobalCacheHolder.getRef().getCache().getCached().get(GlobalCached.FIXED_BUGS.getKey()) == null) {
+            List<JiraIssue> buffer = new ArrayList<>();
+            // query fixed bug issues from server
+            try {
+                int start = 0;
+                IssueQueryResult queryResult;
+                do {
+                    queryResult = new ClientResourceGetter<>(IssueQueryResult.class)
+                            .getClientResourceObject(forgeQuery(Query.GET_ALL_FIXED_BUGS, this.jiraProject, start));
+                    buffer.addAll(Arrays.asList(queryResult.getIssues()));
+                    start += queryResult.getIssues().length;
 
-            } while (start < queryResult.getTotal());
-            return fixedBugIssues;
+                } while (start < queryResult.getTotal());
+                GlobalCacheHolder.getRef().getCache().getCached().put(GlobalCached.FIXED_BUGS.getKey(), buffer);
 
-        } catch (UnableToGetResourceObjectException e) {
+            } catch (UnableToGetResourceObjectException e) {
 
-            throw new UnableToGetAllFixedBugsException(e);
+                throw new UnableToGetAllFixedBugsException(e);
+            }
         }
+        fixedBugIssues.addAll(((List<JiraIssue>) GlobalCacheHolder.getRef().getCache().getCached().get(GlobalCached.FIXED_BUGS.getKey())));
+        return fixedBugIssues;
     }
 
     public List<JiraIssue> getAllFixedBugIssues(Date startDate, Date endDate) throws UnableToGetAllFixedBugsException{

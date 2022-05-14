@@ -2,6 +2,8 @@ package it.torkin;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -15,14 +17,14 @@ import it.torkin.dao.jira.JiraRelease;
 class TestGitDao {
     
     @Test
-    void testGetFileNamesList() throws UnableToAccessRepositoryException, UnableToGetFileNamesException, UnableToGetCommitsException{
+    void testGetFileNamesList() throws UnableToAccessRepositoryException, UnableToGetFileNamesException, UnableToGetCommitsException, ParseException{
 
         GitDao dao = new GitDao("avro");
         String expected = "doc/examples/java-example/src/main/java/example/GenericMain.java";   //git ls-tree release-1.10.2 --name-only -r | grep ".*\.java$" | head -n 1
 
         JiraRelease release = new JiraRelease();
-        release.setName("release-1.10.2");
-        // no need to set release date
+        release.setName("1.10.2");
+        release.setReleaseDate(new SimpleDateFormat("yyyy-MM-dd").parse("2021-03-15"));
         
         List<String> fileNames = dao.getFileNames(dao.getLatestCommit(release.getReleaseDate()));
 

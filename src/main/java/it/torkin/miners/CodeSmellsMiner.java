@@ -3,7 +3,6 @@ package it.torkin.miners;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import it.torkin.dao.sonar.IssueQueryResult;
 import it.torkin.dao.sonar.SonarDao;
 import it.torkin.dao.sonar.UnableToGetSmellsException;
 
@@ -28,13 +27,16 @@ public class CodeSmellsMiner extends Miner{
             
             // queries sonarcloud for smells of given file at given release
             SonarDao dao = new SonarDao(this.organization, this.project);
-            IssueQueryResult issueQueryResult = dao.getCodeSmells(bean.getResourceName(), bean.getTimeOrderedReleases().get(bean.getReleaseIndex()).getReleaseDate());
+            int nSmells = dao
+                .getCodeSmells(bean.getResourceName(), bean.getTimeOrderedReleases().get(bean.getReleaseIndex())
+                .getReleaseDate())
+                .size();
             bean
                 .getObservationMatrix()
                 .getMatrix()
                 .get(bean.getTimeOrderedReleases().get(bean.getReleaseIndex()).getName())
                 .get(bean.getResourceName())
-                .put(Feature.CODE_SMELLS, Integer.toString(issueQueryResult.getTotal()));
+                .put(Feature.CODE_SMELLS, Integer.toString(nSmells));
         } catch (UnableToGetSmellsException e) {
             logger.log(Level.SEVERE, e.getMessage(), e);
         }
