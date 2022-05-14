@@ -1,6 +1,5 @@
 package it.torkin.dao.sonar;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -77,9 +76,9 @@ public class SonarDao {
             }
         }
         smells.addAll((List<SonarIssue>)GlobalCacheHolder.getRef().getCache().getCached().get(GlobalCached.CODE_SMELLS.getKey()));
-        smells.removeIf(sonarIssue -> {
-            return !sonarIssue.getComponent().contains(resourcePath) || sonarIssue.getCreationDate().compareTo(createdBefore) >= 0;
-        });
+        smells.removeIf(
+            sonarIssue -> !sonarIssue.getComponent().contains(resourcePath) || sonarIssue.getCreationDate().compareTo(createdBefore) >= 0
+        );
         return smells;
                     
         
