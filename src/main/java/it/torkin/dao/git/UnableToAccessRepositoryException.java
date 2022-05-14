@@ -5,6 +5,7 @@ public class UnableToAccessRepositoryException extends Exception{
     private final String repoName;
     
     public UnableToAccessRepositoryException(String repoName, Throwable cause){
+        super(cause);
         this.repoName = repoName;
     }
 

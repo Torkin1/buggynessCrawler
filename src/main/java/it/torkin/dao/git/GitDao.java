@@ -15,16 +15,12 @@ import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.diff.DiffFormatter;
 import org.eclipse.jgit.diff.RawTextComparator;
 import org.eclipse.jgit.diff.DiffEntry.ChangeType;
-import org.eclipse.jgit.lib.Constants;
-import org.eclipse.jgit.lib.ObjectId;
-import org.eclipse.jgit.lib.ObjectReader;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.revwalk.filter.MessageRevFilter;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
-import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import org.eclipse.jgit.treewalk.filter.PathSuffixFilter;
 import org.eclipse.jgit.util.io.DisabledOutputStream;
@@ -32,12 +28,13 @@ import org.eclipse.jgit.util.io.DisabledOutputStream;
 public class GitDao {
     
     private final Repository repository;
+    private static final String REPO_DIR_NAME = "repos/";
 
     public GitDao(String repoName) throws UnableToAccessRepositoryException{
         try {
             FileRepositoryBuilder repositoryBuilder = new FileRepositoryBuilder();
             repositoryBuilder.setMustExist(true);
-            repositoryBuilder.setWorkTree(new File(repoName));
+            repositoryBuilder.setWorkTree(new File(REPO_DIR_NAME + repoName));
             this.repository = repositoryBuilder.build();
         } catch (IOException e) {
             throw new UnableToAccessRepositoryException(repoName, e);            
