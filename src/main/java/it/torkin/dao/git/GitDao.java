@@ -111,7 +111,7 @@ public class GitDao {
     }
     
     /**This method does not work with the first commit ever of the repository, because it has no parent */
-    public Set<String> getCommitChangeSet(RevCommit commit) throws UnableToGetChangeSet{
+    public Set<String> getCommitChangeSet(RevCommit commit) throws UnableToGetChangeSetException{
         List<DiffEntry> diffEntries;
         Set<String> names = new HashSet<>();
         String name;
@@ -139,7 +139,7 @@ public class GitDao {
             return names;
             
         } catch (IOException | NullParentException e) {
-            throw new UnableToGetChangeSet(e);
+            throw new UnableToGetChangeSetException(e);
         }
     }
 }

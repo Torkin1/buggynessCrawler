@@ -9,7 +9,7 @@ import org.eclipse.jgit.revwalk.RevCommit;
 
 import it.torkin.dao.git.GitDao;
 import it.torkin.dao.git.UnableToAccessRepositoryException;
-import it.torkin.dao.git.UnableToGetChangeSet;
+import it.torkin.dao.git.UnableToGetChangeSetException;
 import it.torkin.dao.git.UnableToGetCommitsException;
 import it.torkin.dao.jira.JiraDao;
 import it.torkin.dao.jira.JiraIssue;
@@ -43,8 +43,7 @@ public class BuggynessMiner extends Miner {
     @Override
     public void mine(MineDataBean bean) throws UnableToMineDataException {
 
-        // get all fixed bug issues in jira s.t lastRelease.date <
-        // issue.fixedVersion[0].date < release.date
+        // get all fixed bug issues in jira s.t lastRelease.date < issue.fixedVersion[0].date < release.date
         try {
             JiraDao jiraDao = new JiraDao(this.jiraProject);
             GitDao gitDao = new GitDao(this.repo);
@@ -66,7 +65,7 @@ public class BuggynessMiner extends Miner {
                 fixingVersions = fixedBug.getFields().getFixVersions();
                 if (fixingVersions.length > 0) {
                     fv = fixingVersions[fixingVersions.length - 1]; // will use only most recent fixing version
-                    fixCommit = gitDao.getLatestCommit(fv.getReleaseDate(), fixedBug.getKey());
+                    fixCommit = gitDao.getLatestCommit(fv.getReleaseDate(), fixedBug.getKey()); // assuming that the fix commit is the most recent one before fv release date which includes JIRA bug id in it's description
 
                     if (fixCommit != null) { // some silly dev could have forgot to include jira issue key in fixing commit
                         changeSet = gitDao.getCommitChangeSet(fixCommit);
@@ -84,11 +83,11 @@ public class BuggynessMiner extends Miner {
 
                                 iv = affectedVersions[0]; // IV is the earliest among affected releases
 
-                                if (iv.getReleaseDate().compareTo(ovDate) <= 0) { // consistency check: IV must be prior to OV
+                                if (iv.getReleaseDate().compareTo(ovDate) <= 0) { // consistency check: IV must be prior to OV, else we discard the issue
                                     for (JiraRelease av : jiraDao.getAllReleased(iv.getReleaseDate(), fv.getReleaseDate())) {   // better not rely entirely on AVs listed in JIRA, as they are often wrong.
                                         Map<Feature, String> measure = bean.getObservationMatrix().getMatrix().get(av.getName()).get(changed);
                                         if (measure != null) { // changed file may be absent in current av
-                                            measure.put(Feature.BUGGYNESS, "yes"); // flag resource in each AV as buggy
+                                            measure.put(Feature.BUGGYNESS, "yes");
                                         }
                                     }
                                 }
@@ -100,7 +99,7 @@ public class BuggynessMiner extends Miner {
 
             }
         } catch (UnableToGetAllFixedBugsException | UnableToAccessRepositoryException | UnableToGetCommitsException
-                | UnableToGetChangeSet | UnableToGetReleasesException e) {
+                | UnableToGetChangeSetException | UnableToGetReleasesException e) {
             throw new UnableToMineBuggynessException(e);
         }
 
