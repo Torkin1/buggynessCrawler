@@ -52,6 +52,7 @@ public class BuggynessMiner extends Miner {
             List<JiraIssue> fixedBugs = jiraDao.getAllFixedBugIssues(new Date(0), ov.getReleaseDate());
             JiraRelease fv;
             JiraRelease iv;
+            Date ovDate;
             JiraRelease[] fixingVersions;
             JiraRelease[] affectedVersions;
             RevCommit fixCommit;
@@ -59,13 +60,15 @@ public class BuggynessMiner extends Miner {
 
             for (JiraIssue fixedBug : fixedBugs) {
 
+                ovDate = fixedBug.getFields().getCreated();
+
                 // get latest commit older than fixedVersion s.t. commit.date < issue.fixedVersion.date and commit.comment.contains(issue.key)
                 fixingVersions = fixedBug.getFields().getFixVersions();
                 if (fixingVersions.length > 0) {
                     fv = fixingVersions[fixingVersions.length - 1]; // will use only most recent fixing version
                     fixCommit = gitDao.getLatestCommit(fv.getReleaseDate(), fixedBug.getKey());
 
-                    if (fixCommit != null) { // some silly dev could have forgot to include jira issue key in fixing commit, making it impossible to find
+                    if (fixCommit != null) { // some silly dev could have forgot to include jira issue key in fixing commit
                         changeSet = gitDao.getCommitChangeSet(fixCommit);
                         for (String changed : changeSet) {
                             affectedVersions = fixedBug.getFields().getVersions();
@@ -79,12 +82,15 @@ public class BuggynessMiner extends Miner {
 
                                 // TODO: update P value
 
-                                iv = affectedVersions[0]; // iv is the earliest among affected releases
-                                for (JiraRelease av : jiraDao.getAllReleased(iv.getReleaseDate(), fv.getReleaseDate())) {
-                                    Map<Feature, String> measure = bean.getObservationMatrix().getMatrix().get(av.getName()).get(changed);
-                                    if (measure != null){   // changed file may be absent in this av
-                                        measure.put(Feature.BUGGYNESS, "yes"); // flag resource in each av as buggy
-                                    }        
+                                iv = affectedVersions[0]; // IV is the earliest among affected releases
+
+                                if (iv.getReleaseDate().compareTo(ovDate) <= 0) { // consistency check: IV must be prior to OV
+                                    for (JiraRelease av : jiraDao.getAllReleased(iv.getReleaseDate(), fv.getReleaseDate())) {   // better not rely entirely on AVs listed in JIRA, as they are often wrong.
+                                        Map<Feature, String> measure = bean.getObservationMatrix().getMatrix().get(av.getName()).get(changed);
+                                        if (measure != null) { // changed file may be absent in current av
+                                            measure.put(Feature.BUGGYNESS, "yes"); // flag resource in each AV as buggy
+                                        }
+                                    }
                                 }
                             }
                         }
