@@ -13,7 +13,7 @@ import it.torkin.rest.UnableToGetResourceObjectException;
 public class JiraDao {
 
     private enum Query{
-        GET_ALL_FIXED_BUGS("https://issues.apache.org/jira/rest/api/2/search?jql=project='%s'AND'issueType'='Bug'AND'status'='closed'AND'resolution'='fixed'&fields=created,fixVersions,versions,resolutiondate,created&startAt=%d"),
+        GET_ALL_FIXED_BUGS("https://issues.apache.org/jira/rest/api/2/search?jql=project='%s'AND'issueType'='Bug'AND('status'='closed'OR'status'='resolved')AND'resolution'='fixed'ORDER BY'created'ASC&fields=created,fixVersions,versions,resolutiondate,created&startAt=%d"),
         GET_ALL_RELEASES("https://issues.apache.org/jira/rest/api/2/project/%s/version")
         ;
     
@@ -72,7 +72,7 @@ public class JiraDao {
         return released;
     }
 
-    public List<JiraIssue> getAllFixedBugIssues() throws UnableToGetAllFixedBugsException {
+    public List<JiraIssue> getTimeOrderedFixedBugIssues() throws UnableToGetAllFixedBugsException {
 
         List<JiraIssue> fixedBugIssues = new ArrayList<>();
         
@@ -100,9 +100,9 @@ public class JiraDao {
         return fixedBugIssues;
     }
 
-    public List<JiraIssue> getAllFixedBugIssues(Date startDate, Date endDate) throws UnableToGetAllFixedBugsException{
+    public List<JiraIssue> getTimeOrderedFixedBugIssues(Date startDate, Date endDate) throws UnableToGetAllFixedBugsException{
 
-        List<JiraIssue> issues = this.getAllFixedBugIssues();
+        List<JiraIssue> issues = this.getTimeOrderedFixedBugIssues();
         issues.removeIf(i -> {
             JiraRelease fv = null;
             JiraRelease[] fixVersions = i.getFields().getFixVersions();
@@ -117,7 +117,7 @@ public class JiraDao {
                     }
                 }
             }
-            return fv == null || (fv.getReleaseDate().compareTo(startDate) < 0 ||  fixVersions[0].getReleaseDate().compareTo(endDate) > 0); 
+            return fv == null || (fv.getReleaseDate().compareTo(startDate) < 0 ||  fv.getReleaseDate().compareTo(endDate) > 0); 
         });
         return issues;
     }
@@ -126,6 +126,17 @@ public class JiraDao {
         List<JiraRelease> releases = getAllReleased();
         releases.removeIf(r -> r.getReleaseDate().compareTo(startDate) < 0 || r.getReleaseDate().compareTo(endDate) >= 0);
         return releases;
+    }
+
+    public int getReleaseOrderIndex(JiraRelease release) throws UnableToGetReleasesException, UnknownJiraReleaseException{
+
+        List<JiraRelease> released = getAllReleased();
+        for (int i = 0; i < released.size(); i ++){
+            if (released.get(i).getName().compareTo(release.getName()) == 0){
+                return i;
+            }
+        }
+        throw new UnknownJiraReleaseException(release.getName());
     }
 
 

@@ -189,6 +189,8 @@ public class App
         prepareMiners();
         prepareReleases();
         prepareObservationMatrix();
+
+        logger.info("Ready to mine!");
         
         // launches miners
         MineDataBean mineDataBean = new MineDataBean();
@@ -196,15 +198,18 @@ public class App
         mineDataBean.setTimeOrderedReleases(releases);
 
         try (CSVPrinter printer = new CSVPrinter(new FileWriter("out.csv"), CSVFormat.DEFAULT)) {
-
-            featuresToMeasure.add(Feature.BUGGYNESS);
                         
+            String msg = String.format("about to mine %d releases", releases.size());
+            // mines buggyness of all files in release
+            mineDataBean.setReleaseIndex(mineDataBean.getTimeOrderedReleases().size() - 1);
+            Miner buggynessMiner = new BuggynessMiner(repoOwner, repoName);
+            buggynessMiner.mine(mineDataBean);
+            logger.info("buggyness mined");
+
+            logger.info("about to start feature miners");
             for (JiraRelease r : releases) { // for each release ...
                 mineDataBean.setReleaseIndex(releases.indexOf(r));
 
-                // mines buggyness of all files in release
-                Miner buggynessMiner = new BuggynessMiner(repoOwner, repoName);
-                buggynessMiner.mine(mineDataBean);                
                 mineDataBean
                         .getObservationMatrix()
                         .getMatrix()
@@ -218,8 +223,8 @@ public class App
                                 
                             } 
                             catch (UnableToMineDataException e) {
-                                String msg = String.format("unable to append line to csv of %s at %s", mineDataBean.getResourceName(), mineDataBean.getTimeOrderedReleases().get(mineDataBean.getReleaseIndex()).getName());
-                                logger.log(Level.SEVERE, msg, e);
+                                String msgg = String.format("unable to append line to csv of %s at %s", mineDataBean.getResourceName(), mineDataBean.getTimeOrderedReleases().get(mineDataBean.getReleaseIndex()).getName());
+                                logger.log(Level.SEVERE, msgg, e);
                             }
                         });
                                                 
@@ -228,7 +233,8 @@ public class App
             }
 
            // dumps observation matrix in csv file
-            printObservationMatrix(mineDataBean, printer); 
+            printObservationMatrix(mineDataBean, printer);
+            logger.info("results available in ./out.csv"); 
 
         } catch (IOException | UnableToMineDataException e) {
             logger.log(Level.SEVERE, "unable to write to csv file", e);
