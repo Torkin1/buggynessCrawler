@@ -100,7 +100,8 @@ public class JiraDao {
         return fixedBugIssues;
     }
 
-    public List<JiraIssue> getTimeOrderedFixedBugIssues(Date startDate, Date endDate) throws UnableToGetAllFixedBugsException{
+    /** will get fixed bugs with fv version included between startFv and endFv dates, both included */
+    public List<JiraIssue> getTimeOrderedFixedBugIssues(Date startFvDate, Date endFvDate) throws UnableToGetAllFixedBugsException{
 
         List<JiraIssue> issues = this.getTimeOrderedFixedBugIssues();
         issues.removeIf(i -> {
@@ -117,7 +118,7 @@ public class JiraDao {
                     }
                 }
             }
-            return fv == null || (fv.getReleaseDate().compareTo(startDate) < 0 ||  fv.getReleaseDate().compareTo(endDate) > 0); 
+            return fv == null || (fv.getReleaseDate().compareTo(startFvDate) < 0 ||  fv.getReleaseDate().compareTo(endFvDate) > 0); 
         });
         return issues;
     }

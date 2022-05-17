@@ -1,5 +1,6 @@
 package it.torkin;
 
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -152,6 +153,9 @@ public class App
     private static void printObservationMatrix(MineDataBean mineDataBean, CSVPrinter printer) throws IOException{
         Set<Feature> orderedFeatures = new LinkedHashSet<>(featuresToMeasure);
 
+        // adds buggyness as last feature to print
+        orderedFeatures.add(Feature.BUGGYNESS);
+        
         // prints headers line in csv file
         printer.print("Release");
         printer.print("Resource");
@@ -197,9 +201,15 @@ public class App
         mineDataBean.setObservationMatrix(observationMatrix);
         mineDataBean.setTimeOrderedReleases(releases);
 
-        try (CSVPrinter printer = new CSVPrinter(new FileWriter("out.csv"), CSVFormat.DEFAULT)) {
+        String outputFileName = String.format("%s_%s_dataset.csv", repoOwner, repoName);
+        File outputDir = new File("datasets");
+        if (!outputDir.exists()){
+            outputDir.mkdir();
+        }
+        try (CSVPrinter printer = new CSVPrinter(new FileWriter(outputFileName), CSVFormat.DEFAULT)) {
                         
             String msg = String.format("about to mine %d releases", releases.size());
+            logger.info(msg);
             // mines buggyness of all files in release
             mineDataBean.setReleaseIndex(mineDataBean.getTimeOrderedReleases().size() - 1);
             Miner buggynessMiner = new BuggynessMiner(repoOwner, repoName);
@@ -234,7 +244,8 @@ public class App
 
            // dumps observation matrix in csv file
             printObservationMatrix(mineDataBean, printer);
-            logger.info("results available in ./out.csv"); 
+            msg = String.format("results available in %s/%s", outputDir.getName(), outputFileName);
+            logger.info(msg); 
 
         } catch (IOException | UnableToMineDataException e) {
             logger.log(Level.SEVERE, "unable to write to csv file", e);
