@@ -7,6 +7,7 @@ import java.util.List;
 
 import it.torkin.dao.cache.GlobalCacheHolder;
 import it.torkin.dao.cache.GlobalCached;
+import it.torkin.entities.Release;
 import it.torkin.rest.ClientResourceGetter;
 import it.torkin.rest.UnableToGetResourceObjectException;
 
@@ -44,18 +45,18 @@ public class JiraDao {
      * 
      * @throws UnableToGetReleasesException
      */
-    public List<JiraRelease> getAllReleased() throws UnableToGetReleasesException {
+    public List<Release> getAllReleased() throws UnableToGetReleasesException {
 
-        List<JiraRelease> released = new ArrayList<>();
+        List<Release> released = new ArrayList<>();
         if (GlobalCacheHolder.getRef().getCache().getCached().get(GlobalCached.RELEASES.getKey()) == null) {
             try {
-                List<JiraRelease> buffer = new ArrayList<>();
+                List<Release> buffer = new ArrayList<>();
                 ReleaseQueryResult queryResult;
                 int start = 0;
                 do {
                     queryResult = new ClientResourceGetter<>(ReleaseQueryResult.class)
                             .getClientResourceObject(forgeQuery(Query.GET_ALL_RELEASES, this.jiraProject));
-                    for (JiraRelease r : queryResult.getValues()) {
+                    for (Release r : queryResult.getValues()) {
                         if (r.isReleased() && r.getReleaseDate() != null) {
                             buffer.add(r);
                         }
@@ -68,7 +69,7 @@ public class JiraDao {
                 throw new UnableToGetReleasesException(e);
             }
         }
-        released.addAll((List<JiraRelease>) GlobalCacheHolder.getRef().getCache().getCached().get(GlobalCached.RELEASES.getKey()));
+        released.addAll((List<Release>) GlobalCacheHolder.getRef().getCache().getCached().get(GlobalCached.RELEASES.getKey()));
         return released;
     }
 
@@ -105,13 +106,13 @@ public class JiraDao {
 
         List<JiraIssue> issues = this.getTimeOrderedFixedBugIssues();
         issues.removeIf(i -> {
-            JiraRelease fv = null;
-            JiraRelease[] fixVersions = i.getFields().getFixVersions();
+            Release fv = null;
+            Release[] fixVersions = i.getFields().getFixVersions();
             if (fixVersions.length == 0){
                 return true;
             }
             else{
-                for (JiraRelease r : fixVersions){
+                for (Release r : fixVersions){
                     if (r.getReleaseDate() != null){
                         fv = r;
                         break;
@@ -123,15 +124,15 @@ public class JiraDao {
         return issues;
     }
 
-    public List<JiraRelease> getAllReleased(Date startDate, Date endDate) throws UnableToGetReleasesException{
-        List<JiraRelease> releases = getAllReleased();
+    public List<Release> getAllReleased(Date startDate, Date endDate) throws UnableToGetReleasesException{
+        List<Release> releases = getAllReleased();
         releases.removeIf(r -> r.getReleaseDate().compareTo(startDate) < 0 || r.getReleaseDate().compareTo(endDate) >= 0);
         return releases;
     }
 
-    public int getReleaseOrderIndex(JiraRelease release) throws UnableToGetReleasesException, UnknownJiraReleaseException{
+    public int getReleaseOrderIndex(Release release) throws UnableToGetReleasesException, UnknownJiraReleaseException{
 
-        List<JiraRelease> released = getAllReleased();
+        List<Release> released = getAllReleased();
         for (int i = 0; i < released.size(); i ++){
             if (released.get(i).getName().compareTo(release.getName()) == 0){
                 return i;

@@ -3,7 +3,7 @@ package it.torkin.miners;
 
 import java.util.List;
 
-import it.torkin.dao.jira.JiraRelease;
+import it.torkin.entities.Release;
 import it.torkin.entities.ObservationMatrix;
 
 public class MineDataBean {
@@ -19,7 +19,7 @@ public class MineDataBean {
     private String resourceName;
     
     /**What releases must be considered, time ordered from oldest to most recent*/
-    private List<JiraRelease> timeOrderedReleases;
+    private List<Release> timeOrderedReleases;
 
     public ObservationMatrix getObservationMatrix() {
         return observationMatrix;
@@ -45,11 +45,11 @@ public class MineDataBean {
         this.resourceName = resourceName;
     }
 
-    public List<JiraRelease> getTimeOrderedReleases() {
+    public List<Release> getTimeOrderedReleases() {
         return timeOrderedReleases;
     }
 
-    public void setTimeOrderedReleases(List<JiraRelease> timeOrderedReleases) {
+    public void setTimeOrderedReleases(List<Release> timeOrderedReleases) {
         this.timeOrderedReleases = timeOrderedReleases;
     }  
 }

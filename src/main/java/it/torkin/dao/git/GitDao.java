@@ -1,6 +1,7 @@
 package it.torkin.dao.git;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -25,16 +26,18 @@ import org.eclipse.jgit.treewalk.TreeWalk;
 import org.eclipse.jgit.treewalk.filter.PathSuffixFilter;
 import org.eclipse.jgit.util.io.DisabledOutputStream;
 
+import it.torkin.entities.Release;
+
 public class GitDao {
     
     private final Repository repository;
-    private static final String REPO_DIR_NAME = "repos/";
+    private static final String REPO_DIR_NAME = "repos";
 
     public GitDao(String repoName) throws UnableToAccessRepositoryException{
         try {
             FileRepositoryBuilder repositoryBuilder = new FileRepositoryBuilder();
             repositoryBuilder.setMustExist(true);
-            repositoryBuilder.setWorkTree(new File(REPO_DIR_NAME + repoName));
+            repositoryBuilder.setWorkTree(new File(REPO_DIR_NAME + File.separator + repoName));
             this.repository = repositoryBuilder.build();
         } catch (IOException e) {
             throw new UnableToAccessRepositoryException(repoName, e);            
@@ -141,5 +144,27 @@ public class GitDao {
         } catch (IOException | NullParentException e) {
             throw new UnableToGetChangeSetException(e);
         }
+    }
+
+    public void checkoutRelease(Release release) throws UnableToCheckoutReleaseException{
+
+        try (Git git = new Git(this.repository)){
+            RevCommit releaseCommit = getLatestCommit(release.getReleaseDate());
+            git.checkout().setName(releaseCommit.getName()).call();
+            
+        } catch (UnableToGetCommitsException | GitAPIException e) {
+            
+            throw new UnableToCheckoutReleaseException(e);
+        }
+
+    }
+
+    public File getFile(String fileName) throws FileNotFoundException{
+        String prefix = REPO_DIR_NAME + File.separator + repository.getWorkTree().getName() + File.separator;
+        File target = new File(prefix + fileName);
+        if(!target.exists()){
+            throw new FileNotFoundException(fileName);
+        }
+        return target;
     }
 }

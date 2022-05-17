@@ -14,10 +14,10 @@ import it.torkin.dao.git.UnableToGetChangeSetException;
 import it.torkin.dao.git.UnableToGetCommitsException;
 import it.torkin.dao.jira.JiraDao;
 import it.torkin.dao.jira.JiraIssue;
-import it.torkin.dao.jira.JiraRelease;
 import it.torkin.dao.jira.UnableToGetAllFixedBugsException;
 import it.torkin.dao.jira.UnableToGetReleasesException;
 import it.torkin.dao.jira.UnknownJiraReleaseException;
+import it.torkin.entities.Release;
 
 public class BuggynessMiner extends Miner {
 
@@ -60,15 +60,15 @@ public class BuggynessMiner extends Miner {
     public void mine(MineDataBean bean) throws UnableToMineDataException {
 
         
-        JiraRelease fv;
-        JiraRelease iv;
-        JiraRelease[] fixingVersions;
-        JiraRelease[] affectedVersions;
+        Release fv;
+        Release iv;
+        Release[] fixingVersions;
+        Release[] affectedVersions;
         RevCommit fixCommit;
         Set<String> changeSet;
         JiraDao jiraDao;
         GitDao gitDao;
-        JiraRelease ov;
+        Release ov;
         List<JiraIssue> fixedBugs;
         
         // statistics on issues
@@ -123,7 +123,7 @@ public class BuggynessMiner extends Miner {
                                 }
                                 
                                 // at this point we have a defined IV
-                                for (JiraRelease av : jiraDao.getAllReleased(iv.getReleaseDate(), fv.getReleaseDate())) {   // better not rely entirely on AVs listed in JIRA, as they are often wrong.
+                                for (Release av : jiraDao.getAllReleased(iv.getReleaseDate(), fv.getReleaseDate())) {   // better not rely entirely on AVs listed in JIRA, as they are often wrong.
                                     Map<Feature, String> measure = bean.getObservationMatrix().getMatrix().get(av.getName()).get(changed);
                                     if (measure != null) { // changed file may be absent in current av
                                         measure.put(Feature.BUGGYNESS, "yes");

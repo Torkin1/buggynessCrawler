@@ -16,13 +16,15 @@ import java.util.logging.Logger;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
+
 import it.torkin.dao.git.GitDao;
 import it.torkin.dao.git.UnableToAccessRepositoryException;
+import it.torkin.dao.git.UnableToCheckoutReleaseException;
 import it.torkin.dao.git.UnableToGetCommitsException;
 import it.torkin.dao.git.UnableToGetFileNamesException;
 import it.torkin.dao.jira.JiraDao;
-import it.torkin.dao.jira.JiraRelease;
 import it.torkin.dao.jira.UnableToGetReleasesException;
+import it.torkin.entities.Release;
 import it.torkin.entities.ObservationMatrix;
 import it.torkin.miners.BuggynessMiner;
 import it.torkin.miners.Feature;
@@ -56,7 +58,7 @@ public class App
     private static ObservationMatrix observationMatrix;
 
     /**Releases to get data from */
-    private static List<JiraRelease> releases;
+    private static List<Release> releases;
     
     
     /**
@@ -133,8 +135,8 @@ public class App
             GitDao gitDao = new GitDao(repoName);
             
             // prepares observation matrix with a row for each release and a column for each resource. Matrix cells are initialized with empty Observation objects
-            observationMatrix = new ObservationMatrix(releases.toArray(new JiraRelease[0]));
-                for (JiraRelease release : releases){
+            observationMatrix = new ObservationMatrix(releases.toArray(new Release[0]));
+                for (Release release : releases){
                         List<String> fileNamesOfRelease = gitDao.getFileNames(gitDao.getLatestCommit(release.getReleaseDate()));
                     for (String fileName : fileNamesOfRelease){
                         Map<Feature, String> observation = new EnumMap<>(Feature.class);
@@ -165,7 +167,7 @@ public class App
         printer.println();
 
         // dumps observations in csv file
-        for (JiraRelease r : mineDataBean.getTimeOrderedReleases()) {
+        for (Release r : mineDataBean.getTimeOrderedReleases()) {
             String rName = r.getName();
             observationMatrix.getMatrix().get(rName).forEach((fName, observation) -> {
                 try {
@@ -206,19 +208,24 @@ public class App
         if (!outputDir.exists()){
             outputDir.mkdir();
         }
-        try (CSVPrinter printer = new CSVPrinter(new FileWriter(outputFileName), CSVFormat.DEFAULT)) {
+        try (CSVPrinter printer = new CSVPrinter(new FileWriter(outputDir.getName() + File.separator + outputFileName), CSVFormat.DEFAULT)) {
                         
+            GitDao gitDao = new GitDao(repoName);
+            
             String msg = String.format("about to mine %d releases", releases.size());
             logger.info(msg);
+            
             // mines buggyness of all files in release
             mineDataBean.setReleaseIndex(mineDataBean.getTimeOrderedReleases().size() - 1);
             Miner buggynessMiner = new BuggynessMiner(repoOwner, repoName);
             buggynessMiner.mine(mineDataBean);
             logger.info("buggyness mined");
 
-            logger.info("about to start feature miners");
-            for (JiraRelease r : releases) { // for each release ...
+            for (Release r : releases) { // for each release ...
                 mineDataBean.setReleaseIndex(releases.indexOf(r));
+
+                // checkout files at the time of release
+                gitDao.checkoutRelease(r);
 
                 mineDataBean
                         .getObservationMatrix()
@@ -247,8 +254,11 @@ public class App
             msg = String.format("results available in %s/%s", outputDir.getName(), outputFileName);
             logger.info(msg); 
 
-        } catch (IOException | UnableToMineDataException e) {
+        } catch (IOException e) {
             logger.log(Level.SEVERE, "unable to write to csv file", e);
+        } catch (UnableToAccessRepositoryException | UnableToMineDataException | UnableToCheckoutReleaseException e1) {
+            
+            logger.log(Level.SEVERE, "unable to mine features", e1);
         }
     }
 

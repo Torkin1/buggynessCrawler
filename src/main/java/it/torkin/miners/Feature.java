@@ -35,7 +35,7 @@ public enum Feature {
     /**
      * 5) **Size**: Più è grande, più è probabile che contenga bugs
      */
-    //SIZE("size"),
+    SIZE("size", SizeMiner.class),
     
     /**
      * 6) **NR**: in combinazione con age, se una classe è stata toccata poco

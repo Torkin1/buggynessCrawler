@@ -1,8 +1,8 @@
-package it.torkin.dao.jira;
+package it.torkin.entities;
 
 import java.util.Date;
 
-public class JiraRelease {
+public class Release {
     
     private String name;
     private Date releaseDate;

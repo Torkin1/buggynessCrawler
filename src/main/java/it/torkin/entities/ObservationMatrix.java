@@ -3,7 +3,6 @@ package it.torkin.entities;
 import java.util.HashMap;
 import java.util.Map;
 
-import it.torkin.dao.jira.JiraRelease;
 import it.torkin.miners.Feature;
 
 public class ObservationMatrix {
@@ -13,10 +12,10 @@ public class ObservationMatrix {
      */
     private final Map<String, Map<String, Map<Feature, String>>> matrix;
 
-    public ObservationMatrix(JiraRelease[] releases){
+    public ObservationMatrix(Release[] releases){
 
         this.matrix = new HashMap<>();
-        for (JiraRelease r : releases){
+        for (Release r : releases){
             matrix.put(r.getName(), new HashMap<>());
         }
     }
