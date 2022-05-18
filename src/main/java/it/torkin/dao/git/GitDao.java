@@ -48,6 +48,7 @@ public class GitDao {
         return repository;
     }
 
+    /**gets names of all files in work tree at given commit */
     public List<String> getFileNames(RevCommit commit) throws UnableToGetFileNamesException{
         List<String> fileNames = new ArrayList<>();
 
@@ -76,9 +77,8 @@ public class GitDao {
     }
 
     /**
-     * gets most recent commit applied before beforeDate containing optional commentContent string in its comment 
+     * gets most recent commit applied strictly before {@code beforeDate}  containing optional {@code commentContent} string in its comment 
      * 
-     * @return
      * @throws UnableToGetCommitsException
      */
     public RevCommit getLatestCommit(Date beforeDate, String commentContent) throws UnableToGetCommitsException {
@@ -113,7 +113,8 @@ public class GitDao {
         return resourceName.contains("test") || resourceName.contains("Test");
     }
     
-    /**This method does not work with the first commit ever of the repository, because it has no parent */
+    /**Gets all names of files modified by given commit, in respect to the parent commit.
+     * This method does not work with the first commit ever of the repository, because it has no parent */
     public Set<String> getCommitChangeSet(RevCommit commit) throws UnableToGetChangeSetException{
         List<DiffEntry> diffEntries;
         Set<String> names = new HashSet<>();
@@ -159,6 +160,10 @@ public class GitDao {
 
     }
 
+    /** gets file in repository clone in local file system given it's path relative to work tree.
+     * @param fileName path of requested file relative to repo work tree
+     * @return File object representing same file in local file system coordinates (relative to {@code REPO_DIR_NAME})
+     */
     public File getFile(String fileName) throws FileNotFoundException{
         String prefix = REPO_DIR_NAME + File.separator + repository.getWorkTree().getName() + File.separator;
         File target = new File(prefix + fileName);

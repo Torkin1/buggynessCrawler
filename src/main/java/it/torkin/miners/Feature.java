@@ -57,10 +57,10 @@ public enum Feature {
     //LOC_TOUCHED("locTouched"),
     
     /**
-     * 9) **imported_classes**: Una classe che dipende da tante altre classi
+     * 9) **imports**: Una classe che dipende da tante altre classi
      * è più probabile che sia soggetta a regressioni di altre
      */
-    //IMPORTED_CLASSES("importedClasses")
+    IMPORTS("imports", ImportsMiner.class),
 
     BUGGYNESS("buggyness", null)
     ;

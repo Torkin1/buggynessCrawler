@@ -13,7 +13,7 @@ public abstract class Miner {
      * @throws UnableToMineDataException
      */
     public abstract void mine(MineDataBean bean) throws UnableToMineDataException;
-
+    
     protected String owner;
     protected String repo;
     
