@@ -11,7 +11,7 @@ public enum Feature {
      * Inoltre, una classe accessibile da più punti è meno mantenibile rispetto a una classe
      * accessibile solo in pochi, conosciuti modi.
      */
-    //PUBLICS("publics"),
+    PUBLICS("publics", PublicsMiner.class),
     
     /**
      * 2) **NSmells**: Un alto numero di smells indica una difficile manutenzione 
