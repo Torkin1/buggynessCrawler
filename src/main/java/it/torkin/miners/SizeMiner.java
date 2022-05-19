@@ -7,7 +7,6 @@ import java.io.LineNumberReader;
 
 import it.torkin.dao.git.GitDao;
 import it.torkin.dao.git.UnableToAccessRepositoryException;
-import it.torkin.entities.Release;
 
 public class SizeMiner extends Miner{
 
@@ -25,16 +24,10 @@ public class SizeMiner extends Miner{
     public void mine(MineDataBean bean) throws UnableToMineDataException {
         
         try {
-            Release targetRelease = bean.getTimeOrderedReleases().get(bean.getReleaseIndex());
             GitDao gitDao = new GitDao(super.repo);
             File targetResource = gitDao.getFile(bean.getResourceName());
-            bean
-                .getObservationMatrix()
-                .getMatrix()
-                .get(targetRelease.getName())
-                .get(bean.getResourceName())
-                .put(Feature.SIZE, String.valueOf(countLOCs(targetResource)));
-
+            long locs = countLOCs(targetResource);
+            putObservation(bean, Feature.SIZE, locs);
         } catch (UnableToAccessRepositoryException | IOException e) {
             
             throw new UnableToMineSizeException(e);

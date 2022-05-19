@@ -37,7 +37,7 @@ public abstract class Miner {
         this.repo = project;
     }
 
-    protected void registerObservation(MineDataBean bean, Feature feature, Object measure){
+    protected void putObservation(MineDataBean bean, Feature feature, Object measure){
         bean.getObservationMatrix()
                 .getMatrix()
                 .get(bean.getTimeOrderedReleases().get(bean.getReleaseIndex()).getName())

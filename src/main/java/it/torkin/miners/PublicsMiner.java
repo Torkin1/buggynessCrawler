@@ -19,13 +19,7 @@ public class PublicsMiner extends Miner {
             GitDao gitDao = new GitDao(super.repo);
             File target = gitDao.getFile(bean.getResourceName());
             long publics = countKeywords(target, "public");
-            bean
-                .getObservationMatrix()
-                .getMatrix()
-                .get(bean.getTimeOrderedReleases().get(bean.getReleaseIndex()).getName())
-                .get(bean.getResourceName())
-                .put(Feature.PUBLICS, String.valueOf(publics));
-            
+            putObservation(bean, Feature.PUBLICS, publics);            
     
         } catch (UnableToAccessRepositoryException | IOException e) {
             throw new UnableToMinePublicsException(e);

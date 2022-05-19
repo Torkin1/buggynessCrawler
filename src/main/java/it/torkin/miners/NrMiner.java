@@ -18,7 +18,7 @@ public class NrMiner extends Miner{
             GitDao gitDao = new GitDao(super.repo);
             Release targetRelease = bean.getTimeOrderedReleases().get(bean.getReleaseIndex());
             long nr = gitDao.getAllCommits(bean.getResourceName(), targetRelease.getReleaseDate()).size();
-            registerObservation(bean, Feature.N_R, nr);
+            putObservation(bean, Feature.N_R, nr);
         } catch (UnableToAccessRepositoryException | UnableToGetCommitsException e) {
             
             throw new UnableToMineAgeException(e);

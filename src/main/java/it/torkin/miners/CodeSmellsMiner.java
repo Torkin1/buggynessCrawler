@@ -31,12 +31,7 @@ public class CodeSmellsMiner extends Miner{
                 .getCodeSmells(bean.getResourceName(), bean.getTimeOrderedReleases().get(bean.getReleaseIndex())
                 .getReleaseDate())
                 .size();
-            bean
-                .getObservationMatrix()
-                .getMatrix()
-                .get(bean.getTimeOrderedReleases().get(bean.getReleaseIndex()).getName())
-                .get(bean.getResourceName())
-                .put(Feature.CODE_SMELLS, Integer.toString(nSmells));
+            putObservation(bean, Feature.CODE_SMELLS, nSmells);
         } catch (UnableToGetSmellsException e) {
             logger.log(Level.SEVERE, e.getMessage(), e);
         }
