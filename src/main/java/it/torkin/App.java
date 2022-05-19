@@ -7,6 +7,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -16,6 +17,7 @@ import java.util.logging.Logger;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
+import org.eclipse.jgit.revwalk.RevCommit;
 
 import it.torkin.dao.git.GitDao;
 import it.torkin.dao.git.UnableToAccessRepositoryException;
@@ -59,6 +61,8 @@ public class App
 
     /**Releases to get data from */
     private static List<Release> releases;
+
+    private static Map<String, RevCommit> branches = new HashMap<>();
     
     
     /**
@@ -152,6 +156,18 @@ public class App
 
     }
 
+    private static void prepareBranches() throws UnableToPrepareBranchesException{
+        try {
+            GitDao gitDao = new GitDao(repoName);
+            for (Release r : releases){
+                branches.put(r.getName(), gitDao.getLatestCommit(r.getReleaseDate()));
+            }
+        } catch (UnableToAccessRepositoryException | UnableToGetCommitsException e) {
+            throw new UnableToPrepareBranchesException(e);
+        }
+    }
+
+
     private static void printObservationMatrix(MineDataBean mineDataBean, CSVPrinter printer) throws IOException{
         Set<Feature> orderedFeatures = new LinkedHashSet<>(featuresToMeasure);
 
@@ -187,7 +203,8 @@ public class App
 
     }
 
-    public static void main( String[] args ) throws InvalidArgumentsException, UnableToPrepareReleasesException, UnableToPrepareObservationMatrixException
+    
+    public static void main( String[] args ) throws InvalidArgumentsException, UnableToPrepareReleasesException, UnableToPrepareObservationMatrixException, UnableToPrepareBranchesException
     {
         
         // bootstrap operations
@@ -201,12 +218,13 @@ public class App
         try (CSVPrinter printer = new CSVPrinter(new FileWriter(outputDir.getName() + File.separator + outputFileName), CSVFormat.DEFAULT)) {
                         
             GitDao gitDao = new GitDao(repoName);
+            
+            logger.info("Bootstraping, this can take some time ...");
             gitDao.checkout();
-
             prepareMiners();
             prepareReleases();
             prepareObservationMatrix();
-    
+            prepareBranches();
             logger.info("Ready to mine!");
             
             // launches miners
@@ -227,7 +245,7 @@ public class App
                 mineDataBean.setReleaseIndex(releases.indexOf(r));
 
                 // checkout files at the time of release
-                gitDao.checkout(r);
+                gitDao.checkout(branches.get(r.getName()));
 
                 mineDataBean
                         .getObservationMatrix()

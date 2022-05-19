@@ -1,8 +1,8 @@
 package it.torkin.miners;
 
-public class UnableToMineDataException extends Exception {
+public abstract class UnableToMineDataException extends Exception {
 
-    public UnableToMineDataException(Exception e){
+    protected UnableToMineDataException(Exception e){
         super(e);
     }
 }

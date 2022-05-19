@@ -34,7 +34,7 @@ public enum Feature {
      * che sorgano errori dovuti a equivoci, incomprensioni, cambi di stile, ...
      * Unit: num of authors
      */
-    //N_AUTH("nAuth"),
+    N_AUTH("nAuth", AuthorsMiner.class),
     
     /**
      * 5) **Size**: Più è grande, più è probabile che contenga bugs

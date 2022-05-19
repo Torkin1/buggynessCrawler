@@ -151,14 +151,24 @@ public class GitDao {
         }
     }
 
+    public void checkout(RevCommit commit) throws UnableToCheckoutReleaseException{
+        try (Git git = new Git(this.repository)){
+            git.checkout().setName(commit.getName()).call();
+            
+        } catch (GitAPIException e) {
+            
+            throw new UnableToCheckoutReleaseException(e);
+        }
+    }
+    
     /**checkouts local clone at the latest commit prior to given release */
     public void checkout(Release release) throws UnableToCheckoutReleaseException{
 
         try (Git git = new Git(this.repository)){
             RevCommit releaseCommit = getLatestCommit(release.getReleaseDate());
-            git.checkout().setName(releaseCommit.getName()).call();
+            checkout(releaseCommit);
             
-        } catch (UnableToGetCommitsException | GitAPIException e) {
+        } catch (UnableToGetCommitsException e) {
             
             throw new UnableToCheckoutReleaseException(e);
         }
@@ -170,7 +180,13 @@ public class GitDao {
      * */
     public void checkout() throws UnableToCheckoutReleaseException{
         try (Git git = new Git(this.repository)){
-            git.checkout().setName("master").call();
+            checkout("master");         
+        }
+    }
+
+    public void checkout(String name) throws UnableToCheckoutReleaseException{
+        try (Git git = new Git(this.repository)){
+            git.checkout().setName(name).call();
             
         } catch (GitAPIException e) {
             
