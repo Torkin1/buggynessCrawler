@@ -21,7 +21,7 @@ public class NrMiner extends Miner{
             putObservation(bean, Feature.N_R, nr);
         } catch (UnableToAccessRepositoryException | UnableToGetCommitsException e) {
             
-            throw new UnableToMineAgeException(e);
+            throw new UnableToMineNrException(e);
         }
         
     }

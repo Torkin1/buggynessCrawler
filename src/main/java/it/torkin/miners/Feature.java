@@ -10,6 +10,7 @@ public enum Feature {
      * e dunque offre più superficie per la comparsa di malfunzionamenti durante interazione.
      * Inoltre, una classe accessibile da più punti è meno mantenibile rispetto a una classe
      * accessibile solo in pochi, conosciuti modi.
+     * Unit: "public " keyword occurrences 
      */
     PUBLICS("publics", PublicsMiner.class),
     
@@ -22,10 +23,10 @@ public enum Feature {
     /**
      * 3) **Age**: Più una classe è vecchia e meno è probabile che
      * vengano scovati nuovi bug
-     * Unit: revisions
+     * Unit: weeks
      * 
      */
-    //AGE("age", NrMiner.class),
+    AGE("age", AgeMiner.class),
     
     
     /**
@@ -44,25 +45,29 @@ public enum Feature {
     /**
      * 6) **NR**: in combinazione con age, se una classe è stata toccata poco
      * in un periodo lungo di tempo, è probabile che sia esente da bugs
+     * Unit: revisions
      */
     N_R("nr", NrMiner.class),
     
     /**
      * 7) **NFix**: se classe è fixata in continuazione
      * è probabile che sia molto prona a errori
+     * Unit: fix commits in given release with the target resource in it's changeset 
      * 
      */
     //N_FIX("nFix"),
     
      /**
-     * 8) **LOCs_touched**: Più percentuale di classe è stata modificata, più è probabile che
-     * vengano introdotti dei bugs a seguito delle modifiche
+     * 8) **LOCs_touched**: Più righe della classe sono state modificate, più è probabile che
+     * vengano introdotti dei bugs a seguito delle modifiche.
+     * Unit: non-empty LOCs, summed over given release
      */
     //LOC_TOUCHED("locTouched"),
     
     /**
      * 9) **imports**: Una classe che dipende da tante altre classi
      * è più probabile che sia soggetta a regressioni di altre
+     * Unit: "import " keyword occurrences 
      */
     IMPORTS("imports", ImportsMiner.class),
 

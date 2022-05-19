@@ -92,7 +92,7 @@ public class GitDao {
             }
             Iterable<RevCommit> commits = logCommand.call();
             for (RevCommit commit : commits){
-                if (new Date (commit.getCommitTime()).compareTo(beforeDate) < 0){
+                if (commit.getAuthorIdent().getWhen().compareTo(beforeDate) < 0){
                     return (commit);
                 }
             }
@@ -179,9 +179,7 @@ public class GitDao {
         List<RevCommit> commitList = new ArrayList<>();
         try(Git git = new Git(repository)){
             Iterable<RevCommit> commits = git.log().addPath(fileName).call();
-            commits.forEach(commit -> {
-                commitList.add(commit);
-            });
+            commits.forEach(commitList::add);
         } catch (GitAPIException e) {
             throw new UnableToGetCommitsException(e);
         }
@@ -192,8 +190,25 @@ public class GitDao {
     public List<RevCommit> getAllCommits(String fileName, Date date) throws UnableToGetCommitsException{
         List<RevCommit> commits = getAllCommits(fileName);
         commits.removeIf(commit -> 
-            new Date(commit.getCommitTime()).compareTo(date) >= 0
+            commit.getAuthorIdent().getWhen().compareTo(date) >= 0
                 );
         return commits;
+    }
+
+    /**
+     * gets oldest commit of given resource
+     * 
+     * @throws UnableToGetCommitsException
+     */
+    public RevCommit getOldestCommit(String resourceName) throws UnableToGetCommitsException {
+        // find oldest commit of target resource
+        List<RevCommit> commits = getAllCommits(resourceName);
+        RevCommit oldest = commits.get(0);
+        for (RevCommit candidate : commits) {
+            if (candidate.getCommitTime() < oldest.getCommitTime()) {
+                oldest = candidate;
+            }
+        }
+        return oldest;
     }
 }
