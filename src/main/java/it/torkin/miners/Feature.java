@@ -14,34 +14,38 @@ public enum Feature {
     PUBLICS("publics", PublicsMiner.class),
     
     /**
-     * 2) **NSmells**: Un alto numero di smells indica una difficile manutenzione 
+     * 2) **NSmells**: Un alto numero di smells indica una difficile manutenzione
+     * Unit: smells
      */
     CODE_SMELLS("codeSmells", CodeSmellsMiner.class),
     
     /**
      * 3) **Age**: Più una classe è vecchia e meno è probabile che
      * vengano scovati nuovi bug
+     * Unit: revisions
      * 
      */
-    AGE("age", AgeMiner.class),
+    //AGE("age", NrMiner.class),
     
     
     /**
      * 4) **NAuth**: Più persone lavorano a una classe e più è probabile
      * che sorgano errori dovuti a equivoci, incomprensioni, cambi di stile, ...
+     * Unit: num of authors
      */
     //N_AUTH("nAuth"),
     
     /**
      * 5) **Size**: Più è grande, più è probabile che contenga bugs
+     * Unit: non-empty LOCs
      */
-    SIZE("size", SizeMiner.class),
+    //SIZE("size", SizeMiner.class),
     
     /**
      * 6) **NR**: in combinazione con age, se una classe è stata toccata poco
      * in un periodo lungo di tempo, è probabile che sia esente da bugs
      */
-    //N_R("nr"),
+    N_R("nr", NrMiner.class),
     
     /**
      * 7) **NFix**: se classe è fixata in continuazione

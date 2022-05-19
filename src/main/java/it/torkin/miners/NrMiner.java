@@ -5,9 +5,9 @@ import it.torkin.dao.git.UnableToAccessRepositoryException;
 import it.torkin.dao.git.UnableToGetCommitsException;
 import it.torkin.entities.Release;
 
-public class AgeMiner extends Miner{
+public class NrMiner extends Miner{
 
-    public AgeMiner(String owner, String project) {
+    public NrMiner(String owner, String project) {
         super(owner, project);
     }
 
@@ -17,8 +17,8 @@ public class AgeMiner extends Miner{
         try {
             GitDao gitDao = new GitDao(super.repo);
             Release targetRelease = bean.getTimeOrderedReleases().get(bean.getReleaseIndex());
-            long age = gitDao.getAllCommits(bean.getResourceName(), targetRelease.getReleaseDate()).size();
-            registerObservation(bean, age);
+            long nr = gitDao.getAllCommits(bean.getResourceName(), targetRelease.getReleaseDate()).size();
+            registerObservation(bean, Feature.N_R, nr);
         } catch (UnableToAccessRepositoryException | UnableToGetCommitsException e) {
             
             throw new UnableToMineAgeException(e);

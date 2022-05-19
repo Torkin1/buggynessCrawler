@@ -24,6 +24,7 @@ public class SizeMiner extends Miner{
     @Override
     public void mine(MineDataBean bean) throws UnableToMineDataException {
         
+        /*
         try {
             Release targetRelease = bean.getTimeOrderedReleases().get(bean.getReleaseIndex());
             GitDao gitDao = new GitDao(super.repo);
@@ -39,6 +40,8 @@ public class SizeMiner extends Miner{
             
             throw new UnableToMineSizeException(e);
         }
+    */
     }
+    
     
 }
