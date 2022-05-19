@@ -52,10 +52,10 @@ public enum Feature {
     /**
      * 7) **NFix**: se classe è fixata in continuazione
      * è probabile che sia molto prona a errori
-     * Unit: fix commits in given release with the target resource in it's changeset 
+     * Unit: fix commits until given release with the target resource in it's changeset 
      * 
      */
-    //N_FIX("nFix"),
+    N_FIX("nFix", FixMiner.class),
     
      /**
      * 8) **LOCs_touched**: Più righe della classe sono state modificate, più è probabile che

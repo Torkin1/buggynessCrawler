@@ -33,7 +33,7 @@ public class JiraDao {
     private String jiraProject;
 
     public JiraDao(String jiraProject){
-        this.jiraProject = jiraProject;
+        this.jiraProject = jiraProject.toUpperCase();
     }
 
     private String forgeQuery(Query query, Object... args){
