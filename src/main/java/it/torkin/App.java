@@ -137,7 +137,7 @@ public class App
             // prepares observation matrix with a row for each release and a column for each resource. Matrix cells are initialized with empty Observation objects
             observationMatrix = new ObservationMatrix(releases.toArray(new Release[0]));
                 for (Release release : releases){
-                        List<String> fileNamesOfRelease = gitDao.getFileNames(gitDao.getLatestCommit(release.getReleaseDate()));
+                    List<String> fileNamesOfRelease = gitDao.getFileNames(gitDao.getLatestCommit(release.getReleaseDate()));
                     for (String fileName : fileNamesOfRelease){
                         Map<Feature, String> observation = new EnumMap<>(Feature.class);
                         observation.put(Feature.BUGGYNESS, "no");
@@ -192,16 +192,6 @@ public class App
         
         // bootstrap operations
         parseArgs(args);
-        prepareMiners();
-        prepareReleases();
-        prepareObservationMatrix();
-
-        logger.info("Ready to mine!");
-        
-        // launches miners
-        MineDataBean mineDataBean = new MineDataBean();
-        mineDataBean.setObservationMatrix(observationMatrix);
-        mineDataBean.setTimeOrderedReleases(releases);
 
         String outputFileName = String.format("%s_%s_dataset.csv", repoOwner, repoName);
         File outputDir = new File("datasets");
@@ -211,6 +201,18 @@ public class App
         try (CSVPrinter printer = new CSVPrinter(new FileWriter(outputDir.getName() + File.separator + outputFileName), CSVFormat.DEFAULT)) {
                         
             GitDao gitDao = new GitDao(repoName);
+            gitDao.checkout();
+
+            prepareMiners();
+            prepareReleases();
+            prepareObservationMatrix();
+    
+            logger.info("Ready to mine!");
+            
+            // launches miners
+            MineDataBean mineDataBean = new MineDataBean();
+            mineDataBean.setObservationMatrix(observationMatrix);
+            mineDataBean.setTimeOrderedReleases(releases);    
             
             String msg = String.format("about to mine %d releases", releases.size());
             logger.info(msg);
@@ -225,7 +227,7 @@ public class App
                 mineDataBean.setReleaseIndex(releases.indexOf(r));
 
                 // checkout files at the time of release
-                gitDao.checkoutRelease(r);
+                gitDao.checkout(r);
 
                 mineDataBean
                         .getObservationMatrix()

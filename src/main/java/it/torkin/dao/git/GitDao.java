@@ -91,12 +91,15 @@ public class GitDao {
                 logCommand.setRevFilter(MessageRevFilter.create(commentContent));
             }
             Iterable<RevCommit> commits = logCommand.call();
-            for (RevCommit commit : commits){
-                if (commit.getAuthorIdent().getWhen().compareTo(beforeDate) < 0){
-                    return (commit);
+            RevCommit latest = null;
+            Date candidateDate = new Date(0);
+            for (RevCommit candidate : commits){
+                candidateDate = candidate.getAuthorIdent().getWhen();
+                if (candidateDate.compareTo(beforeDate) < 0 && (latest == null || candidateDate.compareTo(latest.getAuthorIdent().getWhen()) > 0)){
+                    latest = candidate;
                 }
             }
-            return null;
+            return latest;
 
         } catch (GitAPIException e) {
 
@@ -148,7 +151,8 @@ public class GitDao {
         }
     }
 
-    public void checkoutRelease(Release release) throws UnableToCheckoutReleaseException{
+    /**checkouts local clone at the latest commit prior to given release */
+    public void checkout(Release release) throws UnableToCheckoutReleaseException{
 
         try (Git git = new Git(this.repository)){
             RevCommit releaseCommit = getLatestCommit(release.getReleaseDate());
@@ -159,6 +163,19 @@ public class GitDao {
             throw new UnableToCheckoutReleaseException(e);
         }
 
+    }
+    
+    /**checkouts local clone to master 
+     * @throws UnableToCheckoutReleaseException
+     * */
+    public void checkout() throws UnableToCheckoutReleaseException{
+        try (Git git = new Git(this.repository)){
+            git.checkout().setName("master").call();
+            
+        } catch (GitAPIException e) {
+            
+            throw new UnableToCheckoutReleaseException(e);
+        } 
     }
 
     /** gets file in repository clone in local file system given it's path relative to work tree.
@@ -189,8 +206,9 @@ public class GitDao {
     /** gets all commits related to given file and committed strictly before given date */
     public List<RevCommit> getAllCommits(String fileName, Date date) throws UnableToGetCommitsException{
         List<RevCommit> commits = getAllCommits(fileName);
-        commits.removeIf(commit -> 
-            commit.getAuthorIdent().getWhen().compareTo(date) >= 0
+        commits.removeIf(commit ->{
+            return commit.getAuthorIdent().getWhen().compareTo(date) >= 0;
+        } 
                 );
         return commits;
     }

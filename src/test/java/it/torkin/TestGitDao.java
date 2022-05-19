@@ -43,6 +43,6 @@ class TestGitDao {
         JiraDao jiraDao = new JiraDao("AVRO");
 
         List<Release> releases = jiraDao.getAllReleased();
-        gitDao.checkoutRelease(releases.get(0));
+        gitDao.checkout(releases.get(0));
     }
 }
