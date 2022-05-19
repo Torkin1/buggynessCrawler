@@ -113,8 +113,9 @@ public class GitDao {
         return resourceName.contains("test") || resourceName.contains("Test");
     }
     
-    /**Gets all names of files modified by given commit, in respect to the parent commit.
-     * This method does not work with the first commit ever of the repository, because it has no parent */
+    /**Gets all names of files in current work tree modified by given commit, in respect to the parent commit.
+     * This method does not work with the first commit ever of the repository, because it has no parent
+     * You can switch waork tree calling a checkout first */
     public Set<String> getCommitChangeSet(RevCommit commit) throws UnableToGetChangeSetException{
         List<DiffEntry> diffEntries;
         Set<String> names = new HashSet<>();
@@ -171,5 +172,28 @@ public class GitDao {
             throw new FileNotFoundException(fileName);
         }
         return target;
+    }
+
+    /** gets all commits related to given file */
+    public List<RevCommit> getAllCommits(String fileName) throws UnableToGetCommitsException{
+        List<RevCommit> commitList = new ArrayList<>();
+        try(Git git = new Git(repository)){
+            Iterable<RevCommit> commits = git.log().addPath(fileName).call();
+            commits.forEach(commit -> {
+                commitList.add(commit);
+            });
+        } catch (GitAPIException e) {
+            throw new UnableToGetCommitsException(e);
+        }
+        return commitList;
+    }
+
+    /** gets all commits related to given file and committed strictly before given date */
+    public List<RevCommit> getAllCommits(String fileName, Date date) throws UnableToGetCommitsException{
+        List<RevCommit> commits = getAllCommits(fileName);
+        commits.removeIf(commit -> 
+            new Date(commit.getCommitTime()).compareTo(date) >= 0
+                );
+        return commits;
     }
 }

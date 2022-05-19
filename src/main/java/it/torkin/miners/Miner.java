@@ -30,10 +30,18 @@ public abstract class Miner {
             }    
         }
         return matches; 
-}
-    
+}    
+
     protected Miner(String owner, String project){
         this. owner = owner;
         this.repo = project;
+    }
+
+    protected void registerObservation(MineDataBean bean, Object measure){
+        bean.getObservationMatrix()
+                .getMatrix()
+                .get(bean.getTimeOrderedReleases().get(bean.getReleaseIndex()).getName())
+                .get(bean.getResourceName())
+                .put(Feature.AGE, String.valueOf(measure));
     }
 }

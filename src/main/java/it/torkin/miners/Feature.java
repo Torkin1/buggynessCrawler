@@ -23,7 +23,7 @@ public enum Feature {
      * vengano scovati nuovi bug
      * 
      */
-    //AGE("age"),
+    AGE("age", AgeMiner.class),
     
     
     /**
