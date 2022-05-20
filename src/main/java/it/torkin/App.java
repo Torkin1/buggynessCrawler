@@ -219,7 +219,7 @@ public class App
                         
             GitDao gitDao = new GitDao(repoName);
             
-            logger.info("Bootstraping, this can take some time ...");
+            logger.info("Bootstraping ...");
             gitDao.checkout();
             prepareMiners();
             prepareReleases();
@@ -239,7 +239,7 @@ public class App
             mineDataBean.setReleaseIndex(mineDataBean.getTimeOrderedReleases().size() - 1);
             Miner buggynessMiner = new BuggynessMiner(repoOwner, repoName);
             buggynessMiner.mine(mineDataBean);
-            logger.info("buggyness mined");
+            logger.info("about to start mining features. This can take a while, why don't you go grab a coffe ☕ in the meantime?");
 
             for (Release r : releases) { // for each release ...
                 mineDataBean.setReleaseIndex(releases.indexOf(r));
