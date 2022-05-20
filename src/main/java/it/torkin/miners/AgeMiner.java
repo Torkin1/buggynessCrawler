@@ -30,7 +30,7 @@ public class AgeMiner extends Miner {
                 RevCommit oldest = gitDao.getOldestCommit(bean.getResourceName());
                 LocalDateTime oldestDate = LocalDateTime.ofInstant(Instant.ofEpochMilli(oldest.getAuthorIdent().getWhen().getTime()), ZoneId.of(oldest.getAuthorIdent().getTimeZone().getID()));
                 LocalDateTime releaseDate = LocalDateTime.ofInstant(Instant.ofEpochMilli(targetRelease.getReleaseDate().getTime()), ZoneId.systemDefault());
-                long weeks = ChronoUnit.WEEKS.between(releaseDate, oldestDate);
+                long weeks = Math.abs(ChronoUnit.WEEKS.between(releaseDate, oldestDate));
     
                 putObservation(bean, Feature.AGE, weeks);
     
