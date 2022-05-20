@@ -26,11 +26,18 @@ public class FixMiner extends Miner{
     public void mine(MineDataBean bean) throws UnableToMineDataException {
         
         Release targetRelease = bean.getTimeOrderedReleases().get(bean.getReleaseIndex());
+        Date previousReleaseDate;
+        if (bean.getReleaseIndex() == 0){
+            previousReleaseDate = new Date(0); 
+        }
+        else {
+            previousReleaseDate = bean.getTimeOrderedReleases().get(bean.getReleaseIndex() - 1).getReleaseDate();
+        }
         JiraDao jiraDao = new JiraDao(super.repo.toUpperCase());
         long nFix = 0;
         try {
             GitDao gitDao = new GitDao(super.repo);
-            List<JiraIssue> fixedBugs = jiraDao.getTimeOrderedFixedBugIssues(new Date(0), targetRelease.getReleaseDate());
+            List<JiraIssue> fixedBugs = jiraDao.getTimeOrderedFixedBugIssues(previousReleaseDate, targetRelease.getReleaseDate());
             for (JiraIssue fixedBug : fixedBugs){
                 
                 // get fix commit, namely most recent commit before fv date with issue key in commit description
