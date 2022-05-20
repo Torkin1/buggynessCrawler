@@ -27,6 +27,11 @@ public class BuggynessMiner extends Miner {
     private double estimatedP;
     private static final double ALPHA = 0.5;    // 1/2, may be suboptimal. Choose negative powers of 2 to improve perfomance
 
+    // statistics
+    private int knownIvIssues = 0;
+    private int estimatedIvIssues = 0;
+
+
     private Logger logger = Logger.getLogger(this.getClass().getName());
 
     public BuggynessMiner(String owner, String project) {
@@ -56,6 +61,39 @@ public class BuggynessMiner extends Miner {
         return (double) (fvIndex - ivIndex) / (fvIndex - ovIndex);
     }
     
+    private void putBuggyness(JiraDao jiraDao, Release iv, Release fv, MineDataBean bean, String changed) throws UnableToGetReleasesException {
+        // at this point we have a defined IV
+        for (Release av : jiraDao.getAllReleased(iv.getReleaseDate(), fv.getReleaseDate())) { // better not rely entirely on AVs listed in JIRA, as they are often wrong.
+            Map<Feature, String> measure = bean.getObservationMatrix().getMatrix().get(av.getName()).get(changed);
+            if (measure != null) { // changed file may be absent in current av
+                measure.put(Feature.BUGGYNESS, "yes");
+            }
+        }
+    }
+
+    private Release estimateIv(JiraIssue fixedBug, MineDataBean bean, JiraDao jiraDao, Release ov, Release fv ) throws UnableToGetReleasesException, UnknownJiraReleaseException{
+        
+        Release iv;
+        Release[] affectedVersions = fixedBug.getFields().getVersions();
+        if (affectedVersions.length == 0 || affectedVersions[0].getReleaseDate() == null || affectedVersions[0].getReleaseDate().compareTo(ov.getReleaseDate()) > 0) {    // not null and concistency check on IV
+    
+            // estimate injectedVersion using proportion
+            iv = bean.getTimeOrderedReleases().get((int) estimateIvIndex(jiraDao.getReleaseOrderIndex(fv), jiraDao.getReleaseOrderIndex(ov)));
+            estimatedIvIssues ++;
+        }
+        else {
+            // sets IV as the earliest release among affected ones and updates proportion estimate 
+            iv = affectedVersions[0];
+            updateEstimatedP(calculateP(
+                jiraDao.getReleaseOrderIndex(ov),
+                jiraDao.getReleaseOrderIndex(fv),
+                jiraDao.getReleaseOrderIndex(iv)
+            ));  
+            knownIvIssues ++;                      
+        }
+        return iv;
+}
+    
     @Override
     public void mine(MineDataBean bean) throws UnableToMineDataException {
 
@@ -63,7 +101,6 @@ public class BuggynessMiner extends Miner {
         Release fv;
         Release iv;
         Release[] fixingVersions;
-        Release[] affectedVersions;
         RevCommit fixCommit;
         Set<String> changeSet;
         JiraDao jiraDao;
@@ -75,8 +112,6 @@ public class BuggynessMiner extends Miner {
         int withFvIssues = 0;
         int nonProductionIssues = 0;
         int noFixCommitIssues = 0;
-        int knownIvIssues = 0;
-        int estimatedIvIssues = 0;
         
         // get all fixed bug issues in jira s.t lastRelease.date < issue.fixedVersion[0].date < release.date
         try {
@@ -87,7 +122,7 @@ public class BuggynessMiner extends Miner {
             estimatedP = 1;  // starting value of p set to 1 based on assumption that IV equals OV when no P is available to estimate IV
 
             withFvIssues = fixedBugs.size();
-            
+
             for (JiraIssue fixedBug : fixedBugs) {
 
                 ov = jiraDao.getAllReleased(fixedBug.getFields().getCreated(), new Date()).get(0);
@@ -103,33 +138,11 @@ public class BuggynessMiner extends Miner {
                             changeSet = gitDao.getCommitChangeSet(fixCommit);
                             
                             for (String changed : changeSet) {
-                                affectedVersions = fixedBug.getFields().getVersions();
                                 
-                                if (affectedVersions.length == 0 || affectedVersions[0].getReleaseDate() == null || affectedVersions[0].getReleaseDate().compareTo(ov.getReleaseDate()) > 0) {    // not null and concistency check on IV
-    
-                                    // estimate injectedVersion using proportion
-                                    iv = bean.getTimeOrderedReleases().get((int) estimateIvIndex(jiraDao.getReleaseOrderIndex(fv), jiraDao.getReleaseOrderIndex(ov)));
-                                    estimatedIvIssues ++;
-                                }
-                                else {
-                                    // sets IV as the earliest release among affected ones and updates proportion estimate 
-                                    iv = affectedVersions[0];
-                                    updateEstimatedP(calculateP(
-                                        jiraDao.getReleaseOrderIndex(ov),
-                                        jiraDao.getReleaseOrderIndex(fv),
-                                        jiraDao.getReleaseOrderIndex(iv)
-                                    ));  
-                                    knownIvIssues ++;                      
-                                }
+                                iv = estimateIv(fixedBug, bean, jiraDao, ov, fv);                                
                                 
                                 // at this point we have a defined IV
-                                for (Release av : jiraDao.getAllReleased(iv.getReleaseDate(), fv.getReleaseDate())) {   // better not rely entirely on AVs listed in JIRA, as they are often wrong.
-                                    Map<Feature, String> measure = bean.getObservationMatrix().getMatrix().get(av.getName()).get(changed);
-                                    if (measure != null) { // changed file may be absent in current av
-                                        measure.put(Feature.BUGGYNESS, "yes");
-                                    }
-                                }
-                                
+                                putBuggyness(jiraDao, iv, fv, bean, changed);                                
                             }
     
                         } else { noFixCommitIssues ++; }
