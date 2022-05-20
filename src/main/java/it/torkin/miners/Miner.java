@@ -17,20 +17,22 @@ public abstract class Miner {
     protected String owner;
     protected String repo;
     
-    protected long countKeywords(File target, String keyword) throws IOException{
+    protected long countKeywords(File target, String... keywords) throws IOException {
         long matches = 0;
         try (BufferedReader reader = new BufferedReader(new FileReader(target));) {
-            for (String line = reader.readLine(); line != null; line = reader.readLine()){
+            for (String line = reader.readLine(); line != null; line = reader.readLine()) {
                 String[] statements = line.split(";");
-                for (String s : statements){
-                    if (s.contains(keyword + " ")){
-                        matches ++;
+                for (String s : statements) {
+                    for (String k : keywords) {
+                        if (s.contains(k + " ")) {
+                            matches++;
+                        }
                     }
                 }
-            }    
+            }
         }
-        return matches; 
-}    
+        return matches;
+    }
 
     protected Miner(String owner, String project){
         this. owner = owner;

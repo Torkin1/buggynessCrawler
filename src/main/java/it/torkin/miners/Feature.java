@@ -52,7 +52,7 @@ public enum Feature {
     /**
      * 7) **NFix**: se classe è fixata in continuazione
      * è probabile che sia molto prona a errori
-     * Unit: fix commits until given release with the target resource in it's changeset 
+     * Unit: fix commits at given release with the target resource in it's changeset 
      * 
      */
     N_FIX("nFix", FixMiner.class),
@@ -60,16 +60,16 @@ public enum Feature {
      /**
      * 8) **LOCs_touched**: Più righe della classe sono state modificate, più è probabile che
      * vengano introdotti dei bugs a seguito delle modifiche.
-     * Unit: non-empty LOCs, summed over given release
+     * Unit: non-empty modified LOCs summed over releases until given one
      */
-    //LOC_TOUCHED("locTouched"),
+    LOC_TOUCHED("locTouched", LocTouchedMiner.class),
     
     /**
      * 9) **imports**: Una classe che dipende da tante altre classi
      * è più probabile che sia soggetta a regressioni di altre
      * Unit: "import " keyword occurrences 
      */
-    IMPORTS("imports", ImportsMiner.class),
+    DEPENDENCIES("dependencies", DependenciesMiner.class),
 
     BUGGYNESS("buggyness", null)
     ;
