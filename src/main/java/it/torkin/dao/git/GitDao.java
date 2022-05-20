@@ -16,12 +16,15 @@ import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.diff.DiffFormatter;
 import org.eclipse.jgit.diff.RawTextComparator;
 import org.eclipse.jgit.diff.DiffEntry.ChangeType;
+import org.eclipse.jgit.lib.ObjectReader;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
-import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.revwalk.filter.MessageRevFilter;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
+import org.eclipse.jgit.treewalk.AbstractTreeIterator;
+import org.eclipse.jgit.treewalk.CanonicalTreeParser;
+import org.eclipse.jgit.treewalk.EmptyTreeIterator;
 import org.eclipse.jgit.treewalk.TreeWalk;
 import org.eclipse.jgit.treewalk.filter.PathSuffixFilter;
 import org.eclipse.jgit.util.io.DisabledOutputStream;
@@ -116,27 +119,47 @@ public class GitDao {
         return resourceName.contains("test") || resourceName.contains("Test");
     }
     
+    /**
+     * gets diff for every file changed between oldCommit and newCommit
+     * @param oldCommit
+     * @param newCommit
+     * @return
+     * @throws UnableToDoDiffException
+     */
+    public List<DiffEntry> getDiffs(RevCommit oldCommit, RevCommit newCommit) throws UnableToDoDiffException{
+        List<DiffEntry> diffEntries;
+        try (   
+            DiffFormatter df = new DiffFormatter(DisabledOutputStream.INSTANCE);
+            ObjectReader reader = repository.newObjectReader();
+        ){
+
+            AbstractTreeIterator oldTreeIterator = (oldCommit != null)? new CanonicalTreeParser(null, reader, oldCommit.getTree()) : new EmptyTreeIterator();
+            AbstractTreeIterator newTreeIterator = new CanonicalTreeParser(null, reader, newCommit.getTree());
+            df.setRepository(repository);
+            df.setDiffComparator(RawTextComparator.DEFAULT);
+            df.setPathFilter(PathSuffixFilter.create(".java"));
+            diffEntries = df.scan(oldTreeIterator, newTreeIterator);
+            return diffEntries;
+
+            
+        } catch (IOException e) {
+            throw new UnableToDoDiffException(e);
+        }
+
+    }
+    
     /**Gets all names of files in current work tree modified by given commit, in respect to the parent commit.
      * This method does not work with the first commit ever of the repository, because it has no parent
-     * You can switch waork tree calling a checkout first */
+     * You can switch work tree calling a checkout first */
     public Set<String> getCommitChangeSet(RevCommit commit) throws UnableToGetChangeSetException{
         List<DiffEntry> diffEntries;
         Set<String> names = new HashSet<>();
         String name;
 
-        try (   
-            RevWalk rw = new RevWalk(repository);
-            DiffFormatter df = new DiffFormatter(DisabledOutputStream.INSTANCE);
-        ){
-
+        try {
+            
             RevCommit parent = commit.getParent(0);
-            if (parent == null){
-                throw new NullParentException();
-            } 
-            df.setRepository(repository);
-            df.setDiffComparator(RawTextComparator.DEFAULT);
-            df.setPathFilter(PathSuffixFilter.create(".java"));
-            diffEntries = df.scan(parent.getTree(), commit.getTree());
+            diffEntries = getDiffs(parent, commit);
 
             for (DiffEntry entry : diffEntries){    // get path for each touched files
                 name = entry.getOldPath();
@@ -146,10 +169,11 @@ public class GitDao {
             }
             return names;
             
-        } catch (IOException | NullParentException e) {
+        } catch (UnableToDoDiffException e) {
             throw new UnableToGetChangeSetException(e);
         }
     }
+
 
     public void checkout(RevCommit commit) throws UnableToCheckoutReleaseException{
         try (Git git = new Git(this.repository)){
@@ -220,13 +244,19 @@ public class GitDao {
     }
 
     /** gets all commits related to given file and committed strictly before given date */
-    public List<RevCommit> getAllCommits(String fileName, Date date) throws UnableToGetCommitsException{
+    public List<RevCommit> getAllCommits(String fileName, Date endDate) throws UnableToGetCommitsException{
+        return getAllCommits(fileName, new Date(0), endDate);
+    }
+
+    /** gets all commits related to given file and committed in given date range (end date excluded) */
+    public List<RevCommit> getAllCommits(String fileName, Date startDate, Date endDate) throws UnableToGetCommitsException{
         List<RevCommit> commits = getAllCommits(fileName);
-        commits.removeIf(commit ->{
-            return commit.getAuthorIdent().getWhen().compareTo(date) >= 0;
-        } 
+        commits.removeIf(commit ->
+            commit.getAuthorIdent().getWhen().compareTo(startDate) < 0 || commit.getAuthorIdent().getWhen().compareTo(endDate) >= 0
+        
                 );
         return commits;
+
     }
 
     /**

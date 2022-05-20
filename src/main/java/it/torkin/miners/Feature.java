@@ -23,7 +23,7 @@ public enum Feature {
     /**
      * 3) **Age**: Più una classe è vecchia e meno è probabile che
      * vengano scovati nuovi bug
-     * Unit: weeks
+     * Unit: weeks 
      * 
      */
     AGE("age", AgeMiner.class),
@@ -58,20 +58,24 @@ public enum Feature {
     N_FIX("nFix", FixMiner.class),
     
      /**
-     * 8) **LOCs_touched**: Più righe della classe sono state modificate, più è probabile che
-     * vengano introdotti dei bugs a seguito delle modifiche.
-     * Unit: non-empty modified LOCs summed over releases until given one
+     * 8) **Churn**: Più la classe è stata modificata nella release considerata
+     *  più è probabile che vengano introdotti dei bugs a seguito delle modifiche
+     * Unit: LOCs (added - deleted)
      */
-    LOC_TOUCHED("locTouched", LocTouchedMiner.class),
+    CHURN("churn", ChurnMiner.class),
     
     /**
-     * 9) **imports**: Una classe che dipende da tante altre classi
+     * 9) **dependencies**: Una classe che dipende da tante altre classi
      * è più probabile che sia soggetta a regressioni di altre
-     * Unit: "import " keyword occurrences 
+     * Unit: total occurrences of keywords among "import ", "extends ", "implements " 
      */
     DEPENDENCIES("dependencies", DependenciesMiner.class),
 
-    BUGGYNESS("buggyness", null)
+    /** A resource is buggy at a given release if such release is among fixed version of a resolved bug ticket
+     * and the resource is mentioned in the changeset of the related fix commit
+     * Unit: yes/no 
+    */
+    BUGGYNESS("isBuggy", null)
     ;
 
     private final String name;
