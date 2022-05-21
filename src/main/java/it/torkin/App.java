@@ -144,7 +144,7 @@ public class App
                     List<String> fileNamesOfRelease = gitDao.getFileNames(gitDao.getLatestCommit(release.getReleaseDate()));
                     for (String fileName : fileNamesOfRelease){
                         Map<Feature, String> observation = new EnumMap<>(Feature.class);
-                        observation.put(Feature.BUGGYNESS, "no");
+                       // observation.put(Feature.BUGGYNESS, "no");
                         observationMatrix.getMatrix().get(release.getName()).put(fileName, observation);
                     }
         }
@@ -219,6 +219,7 @@ public class App
                         
             GitDao gitDao = new GitDao(repoName);
             
+            // bootstrap
             logger.info("Bootstraping ...");
             gitDao.checkout();
             prepareMiners();
@@ -227,7 +228,6 @@ public class App
             prepareBranches();
             logger.info("Ready to mine!");
             
-            // launches miners
             MineDataBean mineDataBean = new MineDataBean();
             mineDataBean.setObservationMatrix(observationMatrix);
             mineDataBean.setTimeOrderedReleases(releases);    

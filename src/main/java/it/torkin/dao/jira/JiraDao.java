@@ -15,7 +15,7 @@ public class JiraDao {
 
     private enum Query{
         GET_ALL_FIXED_BUGS("https://issues.apache.org/jira/rest/api/2/search?jql=project='%s'AND'issueType'='Bug'AND('status'='closed'OR'status'='resolved')AND'resolution'='fixed'ORDER BY'created'ASC&fields=created,fixVersions,versions,resolutiondate,created&startAt=%d"),
-        GET_ALL_RELEASES("https://issues.apache.org/jira/rest/api/2/project/%s/version")
+        GET_ALL_RELEASES("https://issues.apache.org/jira/rest/api/2/project/%s/version?orderBy=releaseDate&status=released")
         ;
     
         private Query(String queryString) {

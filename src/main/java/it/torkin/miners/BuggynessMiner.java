@@ -63,10 +63,13 @@ public class BuggynessMiner extends Miner {
     
     private void putBuggyness(JiraDao jiraDao, Release iv, Release fv, MineDataBean bean, String changed) throws UnableToGetReleasesException {
         // at this point we have a defined IV
-        for (Release av : jiraDao.getAllReleased(iv.getReleaseDate(), fv.getReleaseDate())) { // better not rely entirely on AVs listed in JIRA, as they are often wrong.
-            Map<Feature, String> measure = bean.getObservationMatrix().getMatrix().get(av.getName()).get(changed);
-            if (measure != null) { // changed file may be absent in current av
-                measure.put(Feature.BUGGYNESS, "yes");
+        for (Release av : jiraDao.getAllReleased(iv.getReleaseDate(), fv.getReleaseDate())) { // better not rely entirely on AVs listed in JIRA issue, as they are often wrong.
+            Map<String, Map<Feature, String>> observations = bean.getObservationMatrix().getMatrix().get(av.getName());
+            if (observations != null){   // av could be not in desired range of releases to measure
+                Map<Feature, String> observation = observations.get(changed);
+                if (observation != null) { // changed file may be absent in current av
+                    observation.put(Feature.BUGGYNESS, "yes");
+                }
             }
         }
     }
@@ -78,7 +81,7 @@ public class BuggynessMiner extends Miner {
         if (affectedVersions.length == 0 || affectedVersions[0].getReleaseDate() == null || affectedVersions[0].getReleaseDate().compareTo(ov.getReleaseDate()) > 0) {    // not null and concistency check on IV
     
             // estimate injectedVersion using proportion
-            iv = bean.getTimeOrderedReleases().get((int) estimateIvIndex(jiraDao.getReleaseOrderIndex(fv), jiraDao.getReleaseOrderIndex(ov)));
+            iv = jiraDao.getAllReleased().get((int) estimateIvIndex(jiraDao.getReleaseOrderIndex(fv), jiraDao.getReleaseOrderIndex(ov)));
             estimatedIvIssues ++;
         }
         else {
@@ -97,7 +100,7 @@ public class BuggynessMiner extends Miner {
     @Override
     public void mine(MineDataBean bean) throws UnableToMineDataException {
 
-        
+        List<Release> allReleases;
         Release fv;
         Release iv;
         Release[] fixingVersions;
@@ -113,11 +116,20 @@ public class BuggynessMiner extends Miner {
         int nonProductionIssues = 0;
         int noFixCommitIssues = 0;
         
-        // get all fixed bug issues in jira s.t lastRelease.date < issue.fixedVersion[0].date < release.date
+        // initializes buggyness observations as not buggy
+        bean.getObservationMatrix().getMatrix().forEach((releaseName, observations) -> 
+            observations.forEach((resourceName, observation) -> 
+                observation.put(Feature.BUGGYNESS, "no")
+            ) 
+        );
+        
+        // get all fixed bug issues in jira s.t issue.fixedVersion[0].date < lastRelease.date
         try {
             jiraDao = new JiraDao(this.jiraProject);
             gitDao = new GitDao(this.repo);
-            fixedBugs = jiraDao.getTimeOrderedFixedBugIssues(new Date(0), bean.getTimeOrderedReleases().get(bean.getReleaseIndex()).getReleaseDate());
+
+            allReleases = jiraDao.getAllReleased();
+            fixedBugs = jiraDao.getTimeOrderedFixedBugIssues(new Date(0), allReleases.get(allReleases.size() - 1).getReleaseDate());
 
             estimatedP = 1;  // starting value of p set to 1 based on assumption that IV equals OV when no P is available to estimate IV
 
