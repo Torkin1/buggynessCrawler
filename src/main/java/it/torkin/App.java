@@ -144,7 +144,6 @@ public class App
                     List<String> fileNamesOfRelease = gitDao.getFileNames(gitDao.getLatestCommit(release.getReleaseDate()));
                     for (String fileName : fileNamesOfRelease){
                         Map<Feature, String> observation = new EnumMap<>(Feature.class);
-                       // observation.put(Feature.BUGGYNESS, "no");
                         observationMatrix.getMatrix().get(release.getName()).put(fileName, observation);
                     }
         }

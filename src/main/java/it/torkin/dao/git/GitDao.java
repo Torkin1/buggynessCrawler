@@ -20,7 +20,10 @@ import org.eclipse.jgit.lib.ObjectReader;
 import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.revwalk.RevTree;
+import org.eclipse.jgit.revwalk.filter.AndRevFilter;
+import org.eclipse.jgit.revwalk.filter.CommitTimeRevFilter;
 import org.eclipse.jgit.revwalk.filter.MessageRevFilter;
+import org.eclipse.jgit.revwalk.filter.RevFilter;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.treewalk.AbstractTreeIterator;
 import org.eclipse.jgit.treewalk.CanonicalTreeParser;
@@ -89,10 +92,16 @@ public class GitDao {
         try (Git git = new Git(repository)) {
 
             LogCommand logCommand = git.log();
+            RevFilter filter;
             
+            // set filter on commit time and comment content
+            filter = CommitTimeRevFilter.before(beforeDate);
             if (commentContent != null){
-                logCommand.setRevFilter(MessageRevFilter.create(commentContent));
+                filter = AndRevFilter.create(filter, MessageRevFilter.create(commentContent));
             }
+            logCommand.setRevFilter(filter);
+
+            // extracts latest commit which matches filter
             Iterable<RevCommit> commits = logCommand.call();
             RevCommit latest = null;
             Date candidateDate = new Date(0);
@@ -231,34 +240,33 @@ public class GitDao {
         return target;
     }
 
-    /** gets all commits related to given file */
-    public List<RevCommit> getAllCommits(String fileName) throws UnableToGetCommitsException{
-        List<RevCommit> commitList = new ArrayList<>();
-        try(Git git = new Git(repository)){
-            Iterable<RevCommit> commits = git.log().addPath(fileName).call();
-            commits.forEach(commitList::add);
-        } catch (GitAPIException e) {
-            throw new UnableToGetCommitsException(e);
-        }
-        return commitList;
+/** gets all commits related to given file */
+public List<RevCommit> getAllCommits(String fileName) throws UnableToGetCommitsException{
+    List<RevCommit> commitList = new ArrayList<>();
+    try(Git git = new Git(repository)){
+        Iterable<RevCommit> commits = git.log().addPath(fileName).call();
+        commits.forEach(commitList::add);
+    } catch (GitAPIException e) {
+        throw new UnableToGetCommitsException(e);
     }
+    return commitList;
+}
 
-    /** gets all commits related to given file and committed strictly before given date */
-    public List<RevCommit> getAllCommits(String fileName, Date endDate) throws UnableToGetCommitsException{
-        return getAllCommits(fileName, new Date(0), endDate);
-    }
+/** gets all commits related to given file and committed strictly before given date */
+public List<RevCommit> getAllCommits(String fileName, Date endDate) throws UnableToGetCommitsException{
+    return getAllCommits(fileName, new Date(0), endDate);
+}
 
-    /** gets all commits related to given file and committed in given date range (end date excluded) */
-    public List<RevCommit> getAllCommits(String fileName, Date startDate, Date endDate) throws UnableToGetCommitsException{
-        List<RevCommit> commits = getAllCommits(fileName);
-        commits.removeIf(commit ->
-            commit.getAuthorIdent().getWhen().compareTo(startDate) < 0 || commit.getAuthorIdent().getWhen().compareTo(endDate) >= 0
-        
-                );
-        return commits;
+/** gets all commits related to given file and committed in given date range (end date excluded) */
+public List<RevCommit> getAllCommits(String fileName, Date startDate, Date endDate) throws UnableToGetCommitsException{
+    List<RevCommit> commits = getAllCommits(fileName);
+    commits.removeIf(commit ->
+        commit.getAuthorIdent().getWhen().compareTo(startDate) < 0 || commit.getAuthorIdent().getWhen().compareTo(endDate) >= 0
+    
+            );
+    return commits;
 
-    }
-
+}
     /**
      * gets oldest commit of given resource
      * 
