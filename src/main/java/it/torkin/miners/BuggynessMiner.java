@@ -30,6 +30,7 @@ public class BuggynessMiner extends Miner {
     // statistics
     private int knownIvIssues = 0;
     private int estimatedIvIssues = 0;
+    private int noFeasibleFvIssues = 0;
 
 
     private Logger logger = Logger.getLogger(this.getClass().getName());
@@ -74,7 +75,7 @@ public class BuggynessMiner extends Miner {
         }
     }
 
-    private Release estimateIv(JiraIssue fixedBug, MineDataBean bean, JiraDao jiraDao, Release ov, Release fv ) throws UnableToGetReleasesException, UnknownJiraReleaseException{
+    private Release estimateIv(JiraIssue fixedBug, JiraDao jiraDao, Release ov, Release fv ) throws UnableToGetReleasesException, UnknownJiraReleaseException{
         
         Release iv;
         Release[] affectedVersions = fixedBug.getFields().getVersions();
@@ -95,6 +96,20 @@ public class BuggynessMiner extends Miner {
             knownIvIssues ++;                      
         }
         return iv;
+}
+
+private Release getFixingVersion(Release[] fixingVersions, JiraDao jiraDao) throws UnableToGetReleasesException, NoFeasibleFixingVersionsAvailableException{
+    Release candidate = null;
+    for (int i = fixingVersions.length - 1; i >= 0; i --){
+        try{
+            candidate = jiraDao.getAllReleased().get(jiraDao.getReleaseOrderIndex(fixingVersions[i]));
+            return candidate;
+        } catch (UnknownJiraReleaseException e){
+            // just try another fv
+        }
+    }
+    throw new NoFeasibleFixingVersionsAvailableException();
+
 }
     
     @Override
@@ -141,7 +156,7 @@ public class BuggynessMiner extends Miner {
                 
                 // get latest commit older than fixedVersion s.t. commit.date < issue.fixedVersion.date and commit.comment.contains(issue.key)
                 fixingVersions = fixedBug.getFields().getFixVersions();
-                fv = fixingVersions[fixingVersions.length - 1]; // will use only most recent fixing version
+                fv = getFixingVersion(fixingVersions, jiraDao); // will use only most recent fixing version
                     
                 if (fv.getName().compareTo(ov.getName()) != 0){ // discards non-production defects
                         fixCommit = gitDao.getLatestCommit(fv.getReleaseDate(), fixedBug.getKey()); // assuming that the fix commit is the most recent one before fv release date which includes JIRA bug id in it's description
@@ -151,7 +166,7 @@ public class BuggynessMiner extends Miner {
                             
                             for (String changed : changeSet) {
                                 
-                                iv = estimateIv(fixedBug, bean, jiraDao, ov, fv);                                
+                                iv = estimateIv(fixedBug, jiraDao, ov, fv);                                
                                 
                                 // at this point we have a defined IV
                                 putBuggyness(jiraDao, iv, fv, bean, changed);                                
@@ -161,11 +176,13 @@ public class BuggynessMiner extends Miner {
                     } else { nonProductionIssues++; }
 
             }
-            String msg = String.format("withFvIssues: %d, nonProductionIssues: %d, noFixCommitIssues: %d, knownIvIssues: %d, estimatedIvIssues: %d, ", withFvIssues, nonProductionIssues, noFixCommitIssues, knownIvIssues, estimatedIvIssues);
+            String msg = String.format("withFvIssues: %d, noFeasibleFvIssues: %d, nonProductionIssues: %d, noFixCommitIssues: %d, knownIvIssues: %d, estimatedIvIssues: %d, ", withFvIssues, noFeasibleFvIssues, nonProductionIssues, noFixCommitIssues, knownIvIssues, estimatedIvIssues);
             logger.info(msg);
         } catch (UnableToGetAllFixedBugsException | UnableToAccessRepositoryException | UnableToGetCommitsException
                 | UnableToGetChangeSetException | UnableToGetReleasesException | UnknownJiraReleaseException e) {
             throw new UnableToMineBuggynessException(e);
+        } catch (NoFeasibleFixingVersionsAvailableException e) {
+            noFeasibleFvIssues ++;
         }
 
     }

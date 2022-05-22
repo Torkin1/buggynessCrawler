@@ -14,11 +14,20 @@
 
         {
             "type": "java",
-            "name": "Full mining",
+            "name": "Full mining - Avro",
             "request": "launch",
             "mainClass": "it.torkin.App",
             "args": "Torkin1/avro 50 churn,dependencies,nFix,codeSmells,size,age,publics,nr,nAuth"
         },
+
+        {
+            "type": "java",
+            "name": "Full mining - Bookkeeper",
+            "request": "launch",
+            "mainClass": "it.torkin.App",
+            "args": "Torkin1/bookkeeper 50 churn,dependencies,nFix,codeSmells,size,age,publics,nr,nAuth"
+        },
+
 
         {
             "type": "java",
