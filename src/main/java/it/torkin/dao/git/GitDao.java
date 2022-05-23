@@ -106,8 +106,8 @@ public class GitDao {
             RevCommit latest = null;
             Date candidateDate = new Date(0);
             for (RevCommit candidate : commits){
-                candidateDate = candidate.getAuthorIdent().getWhen();
-                if (candidateDate.compareTo(beforeDate) < 0 && (latest == null || candidateDate.compareTo(latest.getAuthorIdent().getWhen()) > 0)){
+                candidateDate = candidate.getCommitterIdent().getWhen();
+                if (candidateDate.compareTo(beforeDate) < 0 && (latest == null || candidateDate.compareTo(latest.getCommitterIdent().getWhen()) > 0)){
                     latest = candidate;
                 }
             }
@@ -261,7 +261,7 @@ public List<RevCommit> getAllCommits(String fileName, Date endDate) throws Unabl
 public List<RevCommit> getAllCommits(String fileName, Date startDate, Date endDate) throws UnableToGetCommitsException{
     List<RevCommit> commits = getAllCommits(fileName);
     commits.removeIf(commit ->
-        commit.getAuthorIdent().getWhen().compareTo(startDate) < 0 || commit.getAuthorIdent().getWhen().compareTo(endDate) >= 0
+        commit.getCommitterIdent().getWhen().compareTo(startDate) < 0 || commit.getCommitterIdent().getWhen().compareTo(endDate) >= 0
     
             );
     return commits;

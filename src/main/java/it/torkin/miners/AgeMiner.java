@@ -28,7 +28,7 @@ public class AgeMiner extends Miner {
 
                 // calculates age from oldest commit to today
                 RevCommit oldest = gitDao.getOldestCommit(bean.getResourceName());
-                LocalDateTime oldestDate = LocalDateTime.ofInstant(Instant.ofEpochMilli(oldest.getAuthorIdent().getWhen().getTime()), ZoneId.of(oldest.getAuthorIdent().getTimeZone().getID()));
+                LocalDateTime oldestDate = LocalDateTime.ofInstant(Instant.ofEpochMilli(oldest.getCommitterIdent().getWhen().getTime()), ZoneId.of(oldest.getCommitterIdent().getTimeZone().getID()));
                 LocalDateTime releaseDate = LocalDateTime.ofInstant(Instant.ofEpochMilli(targetRelease.getReleaseDate().getTime()), ZoneId.systemDefault());
                 long weeks = Math.abs(ChronoUnit.WEEKS.between(releaseDate, oldestDate));
     

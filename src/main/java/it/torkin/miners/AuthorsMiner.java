@@ -26,7 +26,7 @@ public class AuthorsMiner extends Miner{
             List<RevCommit> commits = gitDao.getAllCommits(bean.getResourceName());
             int authors = 0;
             for (RevCommit commit : commits){
-                seen.add(commit.getAuthorIdent().getName());
+                seen.add(commit.getCommitterIdent().getName());
             }
             authors = seen.size();
             putObservation(bean, Feature.N_AUTH, authors);
