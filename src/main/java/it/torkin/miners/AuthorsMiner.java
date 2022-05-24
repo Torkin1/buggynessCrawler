@@ -4,6 +4,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.eclipse.jgit.lib.PersonIdent;
 import org.eclipse.jgit.revwalk.RevCommit;
 
 import it.torkin.dao.git.GitDao;
@@ -25,8 +26,12 @@ public class AuthorsMiner extends Miner{
             GitDao gitDao = new GitDao(super.repo);
             List<RevCommit> commits = gitDao.getAllCommits(bean.getResourceName());
             int authors = 0;
+            PersonIdent author;
             for (RevCommit commit : commits){
-                seen.add(commit.getCommitterIdent().getName());
+                author = commit.getAuthorIdent();
+                if (author != null){
+                    seen.add(author.getName());
+                }
             }
             authors = seen.size();
             putObservation(bean, Feature.N_AUTH, authors);
